@@ -1016,7 +1016,7 @@ export function CrossTrainer({
       <section
         data-font-scale
         style={{ "--font-scale": fontScale } as CSSProperties}
-        className="flex flex-col gap-6"
+        className="mx-auto w-full max-w-xl flex flex-col gap-6"
       >
         <header className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1114,7 +1114,7 @@ export function CrossTrainer({
     <section
       data-font-scale
       style={{ "--font-scale": fontScale } as CSSProperties}
-      className="flex flex-col gap-6"
+      className="w-full flex flex-col gap-6"
     >
       <header className="flex flex-col gap-3">
         <StageProgress currentStage={stage} isAllSolved={isAllSolved} />
@@ -1263,16 +1263,32 @@ export function CrossTrainer({
         </p>
       </header>
 
-      <CubeView
-        cube={cube}
-        turning={turningProp}
-        onTurnEnd={finishTurn}
-        indicators={activeAction?.indicators}
-        scale={cubeScale}
-      />
-
-      {/* 안내 영역 */}
+      {/* 2열 본문 레이아웃 (모바일 세로 1열 / 데스크톱 가로 2열 분할) */}
       <div
+        className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start"
+        data-testid="guide-layout-container"
+      >
+        {/* 좌측 열: 3D 큐브 뷰 */}
+        <div
+          className="flex flex-col items-center justify-center lg:col-span-5 xl:col-span-5 lg:sticky lg:top-8"
+          data-testid="cube-column"
+        >
+          <CubeView
+            cube={cube}
+            turning={turningProp}
+            onTurnEnd={finishTurn}
+            indicators={activeAction?.indicators}
+            scale={cubeScale}
+          />
+        </div>
+
+        {/* 우측 열: 안내 영역 및 조작 버튼군 */}
+        <div
+          className="flex flex-col gap-6 lg:col-span-7 xl:col-span-7"
+          data-testid="guide-column"
+        >
+          {/* 안내 영역 */}
+          <div
         className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-lg bg-muted p-4 text-center"
         aria-live="polite"
       >
@@ -1720,6 +1736,8 @@ export function CrossTrainer({
         <Button variant="ghost" onClick={restart} disabled={turn !== null}>
           처음부터 다시
         </Button>
+      </div>
+        </div>
       </div>
     </section>
   );

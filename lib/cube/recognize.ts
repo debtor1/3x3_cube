@@ -2,7 +2,24 @@ import { FACES, type Color, type Face } from "./state";
 
 export type FaceColors = Record<Face, Color[]>;
 
-const VALID_COLORS = new Set<Color>(["U", "R", "F", "D", "L", "B"]);
+const COLOR_MAP: Record<string, Color> = {
+  U: "U",
+  W: "U", // White
+  WHITE: "U",
+  R: "R", // Red
+  RED: "R",
+  F: "F",
+  G: "F", // Green
+  GREEN: "F",
+  D: "D",
+  Y: "D", // Yellow
+  YELLOW: "D",
+  L: "L",
+  O: "L", // Orange
+  ORANGE: "L",
+  B: "B", // Blue
+  BLUE: "B",
+};
 
 /**
  * 6개 면의 3x3 색상 데이터를 54개 facelet 배열로 조립합니다.
@@ -19,7 +36,7 @@ export function assembleCubeFromFaces(faces: FaceColors): (Color | null)[] {
         result.push(face);
       } else {
         const color = faceColors[i];
-        result.push(VALID_COLORS.has(color) ? color : null);
+        result.push(COLOR_MAP[color] ?? null);
       }
     }
   }
@@ -45,11 +62,11 @@ export function parseRecognizeResponse(content: string): FaceColors | null {
 
       const validList: Color[] = [];
       for (const item of arr) {
-        const c = String(item).toUpperCase() as Color;
-        if (!VALID_COLORS.has(c)) {
+        const normalized = COLOR_MAP[String(item).trim().toUpperCase()];
+        if (!normalized) {
           return null;
         }
-        validList.push(c);
+        validList.push(normalized);
       }
       result[face] = validList;
     }
@@ -61,41 +78,40 @@ export function parseRecognizeResponse(content: string): FaceColors | null {
 }
 
 export const AI_GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
-export const VISION_MODEL = "google/gemini-2.5-flash";
+export const VISION_MODEL = "google/gemini-2.5-flash-lite";
 
-const SYSTEM_PROMPT = `You are a specialized Rubik's cube vision analyzer.
-Given two diagonal photos of a standard 3x3 Rubik's cube:
-- Image 1 displays 3 faces: U (Up/Top), F (Front), and R (Right).
-- Image 2 displays the opposite 3 faces: D (Down/Bottom), B (Back), and L (Left).
+const SYSTEM_PROMPT = `You are an expert Rubik's Cube vision recognition system.
+You are given two photos of a standard 3x3 Rubik's cube taken from perspective/diagonal angles.
+Photos might be rotated (e.g. 90, 180, or 270 degrees) depending on smartphone camera orientation.
 
-For each face, determine the colors of the 9 stickers arranged in a 3x3 grid (indices 0 to 8, read row-by-row from top-left to bottom-right).
-Valid color codes are:
-- 'U': White
-- 'R': Red
-- 'F': Green
-- 'D': Yellow
-- 'L': Orange
-- 'B': Blue
+Your task:
+1. Identify all visible cube faces across both images.
+2. For each face, determine its standard cube face by examining its CENTER sticker (at index 4 in a 3x3 grid):
+   - White center -> 'U' (Up)
+   - Red center -> 'R' (Right)
+   - Green center -> 'F' (Front)
+   - Yellow center -> 'D' (Down)
+   - Orange center -> 'L' (Left)
+   - Blue center -> 'B' (Back)
+3. For each identified face, determine the colors of its 9 stickers in a 3x3 grid (indices 0 to 8: row 0 is top 3, row 1 is middle 3, row 2 is bottom 3).
+   Reference relative orientation between faces:
+   - When looking at F (Green): Top is U (White), Right is R (Red), Bottom is D (Yellow), Left is L (Orange)
+   - When looking at U (White): Top is B (Blue), Right is R (Red), Bottom is F (Green), Left is L (Orange)
+   - When looking at R (Red): Top is U (White), Right is B (Blue), Bottom is D (Yellow), Left is F (Green)
+   - When looking at B (Blue): Top is U (White), Right is L (Orange), Bottom is D (Yellow), Left is R (Red)
+   - When looking at L (Orange): Top is U (White), Right is F (Green), Bottom is D (Yellow), Left is B (Blue)
+   - When looking at D (Yellow): Top is F (Green), Right is R (Red), Bottom is B (Blue), Left is L (Orange)
+4. Valid color codes:
+   - 'U' for White
+   - 'R' for Red
+   - 'F' for Green
+   - 'D' for Yellow
+   - 'L' for Orange
+   - 'B' for Blue
+5. If a face is partially obscured or not visible in either photo, estimate the most probable stickers based on surrounding edge/corner pieces.
 
-Note:
-- U center is always 'U' (White)
-- R center is always 'R' (Red)
-- F center is always 'F' (Green)
-- D center is always 'D' (Yellow)
-- L center is always 'L' (Orange)
-- B center is always 'B' (Blue)
-
-Respond strictly with valid JSON having the exact keys "U", "R", "F", "D", "L", "B".
-Each key must map to an array of exactly 9 uppercase single-character strings among ["U", "R", "F", "D", "L", "B"].
-Example structure:
-{
-  "U": ["U", "R", "F", "D", "U", "L", "B", "U", "R"],
-  "R": [...9 colors...],
-  "F": [...9 colors...],
-  "D": [...9 colors...],
-  "L": [...9 colors...],
-  "B": [...9 colors...]
-}`;
+Respond strictly with valid JSON having keys "U", "R", "F", "D", "L", "B".
+Each key must map to an array of exactly 9 color codes.`;
 
 /**
  * Vercel AI Gateway를 호출하여 2장의 큐브 사진으로부터 54개 칸의 색상을 추출합니다.
@@ -126,7 +142,7 @@ export async function recognizeCubeFromImages(
           content: [
             {
               type: "text",
-              text: "Image 1 shows faces U (top), F (front), R (right). Image 2 shows faces D (bottom), B (back), L (left). Please inspect the stickers carefully and return the 3x3 colors for all 6 faces in the specified JSON structure.",
+              text: "Please inspect the 3x3 Rubik's cube faces across both images. Identify each face by its center sticker and extract the 3x3 sticker colors for all 6 faces in the specified JSON structure.",
             },
             {
               type: "image_url",
@@ -160,3 +176,98 @@ export async function recognizeCubeFromImages(
 
   return assembleCubeFromFaces(parsedFaces);
 }
+
+const SIX_FACES_SYSTEM_PROMPT = `You are an expert Rubik's Cube vision recognition system.
+You are given 6 photos corresponding to the 6 faces of a standard 3x3 Rubik's cube:
+- Image U: White face (Up)
+- Image R: Red face (Right)
+- Image F: Green face (Front)
+- Image D: Yellow face (Down)
+- Image L: Orange face (Left)
+- Image B: Blue face (Back)
+
+Each photo shows exactly one face taken from the front as a 3x3 grid of stickers.
+For each face, determine the colors of the 9 stickers (indices 0 to 8: row 0 top-left to top-right, row 1 mid-left to mid-right, row 2 bot-left to bot-right).
+
+Valid color codes:
+- 'U' for White
+- 'R' for Red
+- 'F' for Green
+- 'D' for Yellow
+- 'L' for Orange
+- 'B' for Blue
+
+Respond strictly with valid JSON having the exact keys "U", "R", "F", "D", "L", "B".
+Each key must map to an array of exactly 9 color codes.`;
+
+/**
+ * Vercel AI Gateway를 호출하여 6장의 각 면 정면 사진으로부터 54개 칸의 색상을 추출합니다.
+ */
+export async function recognizeCubeFromFaceImages(
+  faces: Record<Face, string>,
+  apiKey: string,
+  fetchFn: typeof fetch = fetch
+): Promise<(Color | null)[]> {
+  const contentItems: Array<
+    | { type: "text"; text: string }
+    | { type: "image_url"; image_url: { url: string } }
+  > = [
+    {
+      type: "text",
+      text: "Please inspect each of the 6 front-facing Rubik's cube photos and extract the 3x3 grid of sticker colors for faces U, R, F, D, L, B in the specified JSON structure.",
+    },
+  ];
+
+  for (const face of FACES) {
+    contentItems.push({
+      type: "text",
+      text: `Face ${face} photo:`,
+    });
+    contentItems.push({
+      type: "image_url",
+      image_url: { url: faces[face] },
+    });
+  }
+
+  const response = await fetchFn(AI_GATEWAY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: VISION_MODEL,
+      response_format: { type: "json_object" },
+      temperature: 0.1,
+      messages: [
+        {
+          role: "system",
+          content: SIX_FACES_SYSTEM_PROMPT,
+        },
+        {
+          role: "user",
+          content: contentItems,
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    throw new Error(`AI Gateway error (${response.status}): ${errText}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("AI 응답 내용이 비어 있습니다.");
+  }
+
+  const parsedFaces = parseRecognizeResponse(content);
+  if (!parsedFaces) {
+    throw new Error("큐브 색상 분석 결과를 파싱할 수 없습니다.");
+  }
+
+  return assembleCubeFromFaces(parsedFaces);
+}
+

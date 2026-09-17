@@ -11,10 +11,14 @@ vi.mock("@/auth", () => ({
 // recognize 모킹
 vi.mock("@/lib/cube/recognize", () => ({
   recognizeCubeFromImages: vi.fn(),
+  recognizeCubeFromFaceImages: vi.fn(),
 }));
 
 import { auth } from "@/auth";
-import { recognizeCubeFromImages } from "@/lib/cube/recognize";
+import {
+  recognizeCubeFromImages,
+  recognizeCubeFromFaceImages,
+} from "@/lib/cube/recognize";
 
 const mockAuth = auth as unknown as Mock;
 
@@ -88,6 +92,38 @@ describe("POST /api/cube/recognize", () => {
     expect(recognizeCubeFromImages).toHaveBeenCalledWith(
       "data:img1",
       "data:img2",
+      "test-key"
+    );
+  });
+
+  it("인가된 사용자가 6개 면 이미지를 전달하면 recognizeCubeFromFaceImages를 호출하고 200을 반환한다", async () => {
+    mockAuth.mockResolvedValue({
+      user: { email: "debtor11@gmail.com" },
+    } as unknown as Session);
+
+    const mockPainted = Array(54).fill("U");
+    vi.mocked(recognizeCubeFromFaceImages).mockResolvedValue(mockPainted);
+
+    const facesPayload = {
+      U: "data:U",
+      R: "data:R",
+      F: "data:F",
+      D: "data:D",
+      L: "data:L",
+      B: "data:B",
+    };
+
+    const req = new Request("http://localhost/api/cube/recognize", {
+      method: "POST",
+      body: JSON.stringify({ faces: facesPayload }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.painted).toHaveLength(54);
+    expect(recognizeCubeFromFaceImages).toHaveBeenCalledWith(
+      facesPayload,
       "test-key"
     );
   });

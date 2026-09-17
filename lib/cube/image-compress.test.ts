@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compressImage } from "./image-compress";
+import { compressImage, rotateImage90 } from "./image-compress";
 
 describe("compressImage", () => {
   it("파일을 읽어 Data URL 문자열을 반환한다", async () => {
@@ -18,6 +18,15 @@ describe("compressImage", () => {
     const file = new File([blob], "test.gif", { type: "image/gif" });
 
     const result = await compressImage(file);
+    expect(result).toBeDefined();
+    expect(result.startsWith("data:image/")).toBe(true);
+  });
+});
+
+describe("rotateImage90", () => {
+  it("Data URL을 받아 90도 회전된 Data URL을 반환한다", async () => {
+    const dummyDataUrl = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    const result = await rotateImage90(dummyDataUrl);
     expect(result).toBeDefined();
     expect(result.startsWith("data:image/")).toBe(true);
   });

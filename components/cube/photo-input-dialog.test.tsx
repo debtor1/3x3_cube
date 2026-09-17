@@ -80,6 +80,10 @@ describe("PhotoInputDialog", () => {
     expect(screen.getByText("4. 뒷면 (B)")).toBeInTheDocument();
     expect(screen.getByText("5. 오른쪽면 (R)")).toBeInTheDocument();
     expect(screen.getByText("6. 왼쪽면 (L)")).toBeInTheDocument();
+    // 상단 기준 방향 힌트 확인
+    expect(screen.getByText("상단: 파란색(뒤)")).toBeInTheDocument();
+    expect(screen.getByText("상단: 초록색(앞)")).toBeInTheDocument();
+    expect(screen.getAllByText("상단: 흰색(위)")).toHaveLength(4);
 
     const analyzeBtn = screen.getByRole("button", {
       name: "AI로 색상 분석하기",

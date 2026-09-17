@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { compressImage } from "@/lib/cube/image-compress";
+import { compressImage, rotateImage90 } from "@/lib/cube/image-compress";
 import { FACES, type Color, type Face } from "@/lib/cube/state";
 
 type Props = {
@@ -29,6 +29,7 @@ const FACE_CONFIGS: Array<{
   face: Face;
   label: string;
   colorName: string;
+  topHint: string;
   dotClass: string;
   badgeClass: string;
 }> = [
@@ -36,6 +37,7 @@ const FACE_CONFIGS: Array<{
     face: "U",
     label: "1. 윗면 (U)",
     colorName: "흰색",
+    topHint: "상단: 파란색(뒤)",
     dotClass: "bg-white border border-neutral-400",
     badgeClass: "border-neutral-300 bg-white text-neutral-800",
   },
@@ -43,6 +45,7 @@ const FACE_CONFIGS: Array<{
     face: "D",
     label: "2. 아랫면 (D)",
     colorName: "노란색",
+    topHint: "상단: 초록색(앞)",
     dotClass: "bg-amber-400",
     badgeClass: "border-amber-200 bg-amber-50 text-amber-800",
   },
@@ -50,6 +53,7 @@ const FACE_CONFIGS: Array<{
     face: "F",
     label: "3. 앞면 (F)",
     colorName: "초록색",
+    topHint: "상단: 흰색(위)",
     dotClass: "bg-emerald-500",
     badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-800",
   },
@@ -57,6 +61,7 @@ const FACE_CONFIGS: Array<{
     face: "B",
     label: "4. 뒷면 (B)",
     colorName: "파란색",
+    topHint: "상단: 흰색(위)",
     dotClass: "bg-blue-500",
     badgeClass: "border-blue-200 bg-blue-50 text-blue-800",
   },
@@ -64,6 +69,7 @@ const FACE_CONFIGS: Array<{
     face: "R",
     label: "5. 오른쪽면 (R)",
     colorName: "빨간색",
+    topHint: "상단: 흰색(위)",
     dotClass: "bg-rose-500",
     badgeClass: "border-rose-200 bg-rose-50 text-rose-800",
   },
@@ -71,6 +77,7 @@ const FACE_CONFIGS: Array<{
     face: "L",
     label: "6. 왼쪽면 (L)",
     colorName: "주황색",
+    topHint: "상단: 흰색(위)",
     dotClass: "bg-orange-500",
     badgeClass: "border-orange-200 bg-orange-50 text-orange-800",
   },
@@ -132,6 +139,31 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
       setError("이미지를 불러오는 중 문제가 발생했습니다.");
     } finally {
       e.target.value = "";
+    }
+  };
+
+  const handleRotateFace = async (face: Face) => {
+    const current = faceImages[face];
+    if (!current) return;
+    try {
+      const rotated = await rotateImage90(current);
+      setFaceImages((prev) => ({ ...prev, [face]: rotated }));
+    } catch {
+      setError("사진 회전 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleRotateDiagonal = async (imageNum: 1 | 2) => {
+    try {
+      if (imageNum === 1 && image1) {
+        const rotated = await rotateImage90(image1);
+        setImage1(rotated);
+      } else if (imageNum === 2 && image2) {
+        const rotated = await rotateImage90(image2);
+        setImage2(rotated);
+      }
+    } catch {
+      setError("사진 회전 중 오류가 발생했습니다.");
     }
   };
 
@@ -317,7 +349,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                         key={cfg.face}
                         className="flex flex-col gap-2 rounded-lg border p-3 bg-card"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-1">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-semibold">{cfg.label}</span>
                             <span
@@ -329,7 +361,9 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                           </div>
                           {img ? (
                             <span className="text-xs font-semibold text-primary">등록됨 ✓</span>
-                          ) : null}
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">{cfg.topHint}</span>
+                          )}
                         </div>
 
                         <input
@@ -351,11 +385,22 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                               alt={`${cfg.label} 미리보기`}
                               className="max-h-32 w-full rounded border object-contain bg-black/5"
                             />
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap justify-center gap-1.5">
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => handleRotateFace(cfg.face)}
+                                title="사진을 시계방향으로 90도 회전합니다"
+                              >
+                                ↺ 90° 회전
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
                                 onClick={() => faceInputRefs.current[cfg.face]?.click()}
                               >
                                 변경
@@ -364,6 +409,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                                 type="button"
                                 variant="ghost"
                                 size="sm"
+                                className="h-7 px-2 text-xs"
                                 onClick={() =>
                                   setFaceImages((prev) => {
                                     const next = { ...prev };
@@ -460,19 +506,31 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                         alt="1번 사진 미리보기"
                         className="max-h-44 w-full rounded border object-contain bg-black/5"
                       />
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap justify-center gap-1.5">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handleRotateDiagonal(1)}
+                          title="사진을 시계방향으로 90도 회전합니다"
+                        >
+                          ↺ 90° 회전
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
                           onClick={() => fileInputRef1.current?.click()}
                         >
-                          사진 변경
+                          변경
                         </Button>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
+                          className="h-7 px-2 text-xs"
                           onClick={() => setImage1(null)}
                         >
                           삭제
@@ -538,19 +596,31 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                         alt="2번 사진 미리보기"
                         className="max-h-44 w-full rounded border object-contain bg-black/5"
                       />
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap justify-center gap-1.5">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handleRotateDiagonal(2)}
+                          title="사진을 시계방향으로 90도 회전합니다"
+                        >
+                          ↺ 90° 회전
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
                           onClick={() => fileInputRef2.current?.click()}
                         >
-                          사진 변경
+                          변경
                         </Button>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
+                          className="h-7 px-2 text-xs"
                           onClick={() => setImage2(null)}
                         >
                           삭제

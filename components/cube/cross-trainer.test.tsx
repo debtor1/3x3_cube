@@ -48,6 +48,14 @@ test("수용 기준 1: 색 입력 화면에 흰 십자가를 스스로 만들어
   expect(screen.getByText(/흰 십자가를 스스로 먼저 맞춰볼 수도 있어요/)).toBeInTheDocument();
 });
 
+test("색 입력 화면에 사진으로 자동 입력 버튼이 보이고, 누르면 모달이 열린다", () => {
+  render(<CrossTrainer />);
+  const photoBtn = screen.getByRole("button", { name: "📷 사진으로 자동 입력" });
+  expect(photoBtn).toBeInTheDocument();
+  fireEvent.click(photoBtn);
+  expect(screen.getByText("큐브 사진으로 색상 자동 입력")).toBeInTheDocument();
+});
+
 test("수용 기준 2: 이미 6면이 모두 완성된 상태를 넣으면 돌릴 것이 없다고 알린다", () => {
   render(<CrossTrainer initialPainted={solvedCube()} />);
   fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));

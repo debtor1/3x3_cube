@@ -2,8 +2,10 @@
 
 import { type CSSProperties, useEffect, useState, useSyncExternalStore } from "react";
 
+import { AuthButton } from "@/components/auth-button";
 import { ColorInput } from "@/components/cube/color-input";
 import { CubeView, type Turning } from "@/components/cube/cube-view";
+import { PhotoInputDialog } from "@/components/cube/photo-input-dialog";
 import { StageProgress } from "@/components/cube/stage-progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -323,6 +325,7 @@ export function CrossTrainer({
   );
   const [selected, setSelected] = useState<Color>("U");
   const [issues, setIssues] = useState<readonly CubeIssue[]>([]);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
 
   const [cube, setCube] = useState<Cube | null>(null);
   const [stage, setStage] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
@@ -1021,14 +1024,17 @@ export function CrossTrainer({
         <header className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-xl font-semibold">내 큐브 색을 알려 주세요</h1>
-            <ScaleControls
-              fontScaleIndex={fontScaleIndex}
-              cubeScaleIndex={cubeScaleIndex}
-              onFontScaleDown={handleFontScaleDown}
-              onFontScaleUp={handleFontScaleUp}
-              onCubeScaleDown={handleCubeScaleDown}
-              onCubeScaleUp={handleCubeScaleUp}
-            />
+            <div className="flex items-center gap-2">
+              <AuthButton />
+              <ScaleControls
+                fontScaleIndex={fontScaleIndex}
+                cubeScaleIndex={cubeScaleIndex}
+                onFontScaleDown={handleFontScaleDown}
+                onFontScaleUp={handleFontScaleUp}
+                onCubeScaleDown={handleCubeScaleDown}
+                onCubeScaleUp={handleCubeScaleUp}
+              />
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">
             지금 손에 든 큐브와 똑같이 칠하면, 완성까지 가는 길을 공식과 함께 알려 줄게요.
@@ -1075,6 +1081,13 @@ export function CrossTrainer({
           <Button onClick={start} disabled={remaining > 0}>
             큐브 맞추기 시작
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPhotoDialogOpen(true)}
+          >
+            📷 사진으로 자동 입력
+          </Button>
           <Button type="button" variant="outline" onClick={fillRandomly}>
             무작위로 채우기
           </Button>
@@ -1082,6 +1095,15 @@ export function CrossTrainer({
             {remaining > 0 ? `${remaining}칸 더 칠하면 돼요` : "모두 칠했어요"}
           </span>
         </div>
+
+        <PhotoInputDialog
+          open={photoDialogOpen}
+          onOpenChange={setPhotoDialogOpen}
+          onRecognized={(newPainted) => {
+            setPainted([...newPainted]);
+            setIssues([]);
+          }}
+        />
       </section>
     );
   }
@@ -1138,14 +1160,17 @@ export function CrossTrainer({
             </span>
           </div>
 
-          <ScaleControls
-            fontScaleIndex={fontScaleIndex}
-            cubeScaleIndex={cubeScaleIndex}
-            onFontScaleDown={handleFontScaleDown}
-            onFontScaleUp={handleFontScaleUp}
-            onCubeScaleDown={handleCubeScaleDown}
-            onCubeScaleUp={handleCubeScaleUp}
-          />
+          <div className="flex items-center gap-2">
+            <AuthButton />
+            <ScaleControls
+              fontScaleIndex={fontScaleIndex}
+              cubeScaleIndex={cubeScaleIndex}
+              onFontScaleDown={handleFontScaleDown}
+              onFontScaleUp={handleFontScaleUp}
+              onCubeScaleDown={handleCubeScaleDown}
+              onCubeScaleUp={handleCubeScaleUp}
+            />
+          </div>
         </div>
 
         <h1 className="text-xl font-semibold">

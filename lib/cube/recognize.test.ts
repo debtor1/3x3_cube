@@ -3,6 +3,7 @@ import {
   assembleCubeFromFaces,
   type FaceColors,
   parseRecognizeResponse,
+  recognizeCubeFromFaceImages,
   recognizeCubeFromImages,
 } from "./recognize";
 
@@ -68,6 +69,24 @@ describe("parseRecognizeResponse", () => {
     const parsed = parseRecognizeResponse(invalidJson);
     expect(parsed).toBeNull();
   });
+
+  it("영문 이니셜(W, G, Y, O) 등의 색상 별칭도 표준 큐브 코드로 정규화하여 파싱한다", () => {
+    const jsonStr = JSON.stringify({
+      U: ["W", "W", "W", "W", "W", "W", "W", "W", "W"],
+      R: ["R", "R", "R", "R", "R", "R", "R", "R", "R"],
+      F: ["G", "G", "G", "G", "G", "G", "G", "G", "G"],
+      D: ["Y", "Y", "Y", "Y", "Y", "Y", "Y", "Y", "Y"],
+      L: ["O", "O", "O", "O", "O", "O", "O", "O", "O"],
+      B: ["B", "B", "B", "B", "B", "B", "B", "B", "B"],
+    });
+
+    const parsed = parseRecognizeResponse(jsonStr);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.U[0]).toBe("U");
+    expect(parsed?.F[0]).toBe("F");
+    expect(parsed?.D[0]).toBe("D");
+    expect(parsed?.L[0]).toBe("L");
+  });
 });
 
 describe("recognizeCubeFromImages", () => {
@@ -121,5 +140,50 @@ describe("recognizeCubeFromImages", () => {
         mockFetch as unknown as typeof fetch
       )
     ).rejects.toThrow("AI Gateway error (401)");
+  });
+});
+
+describe("recognizeCubeFromFaceImages", () => {
+  it("6개 면 이미지를 받아 54개 색상 배열을 반환한다", async () => {
+    const mockJson = JSON.stringify({
+      U: Array(9).fill("U"),
+      R: Array(9).fill("R"),
+      F: Array(9).fill("F"),
+      D: Array(9).fill("D"),
+      L: Array(9).fill("L"),
+      B: Array(9).fill("B"),
+    });
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: mockJson,
+            },
+          },
+        ],
+      }),
+    });
+
+    const mockFaces = {
+      U: "data:image/jpeg;base64,U",
+      R: "data:image/jpeg;base64,R",
+      F: "data:image/jpeg;base64,F",
+      D: "data:image/jpeg;base64,D",
+      L: "data:image/jpeg;base64,L",
+      B: "data:image/jpeg;base64,B",
+    };
+
+    const result = await recognizeCubeFromFaceImages(
+      mockFaces,
+      "test-key",
+      mockFetch as unknown as typeof fetch
+    );
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(result).toHaveLength(54);
+    expect(result[0]).toBe("U");
   });
 });

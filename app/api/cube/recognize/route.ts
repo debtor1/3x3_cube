@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth, ALLOWED_ADMIN_EMAIL } from "@/auth";
-import { recognizeCubeFromImages } from "@/lib/cube/recognize";
+import {
+  recognizeCubeFromImages,
+  recognizeCubeFromFaceImages,
+} from "@/lib/cube/recognize";
+import { FACES, type Face } from "@/lib/cube/state";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -29,16 +33,38 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { image1, image2 } = body || {};
+    const { image1, image2, faces } = body || {};
 
-    if (!image1 || !image2 || typeof image1 !== "string" || typeof image2 !== "string") {
+    let painted;
+
+    if (faces && typeof faces === "object") {
+      const hasAllFaces = FACES.every(
+        (f) => typeof faces[f] === "string" && faces[f].length > 0
+      );
+      if (!hasAllFaces) {
+        return NextResponse.json(
+          { error: "6개 면의 사진이 모두 등록되어야 합니다." },
+          { status: 400 }
+        );
+      }
+      painted = await recognizeCubeFromFaceImages(
+        faces as Record<Face, string>,
+        apiKey
+      );
+    } else if (
+      image1 &&
+      image2 &&
+      typeof image1 === "string" &&
+      typeof image2 === "string"
+    ) {
+      painted = await recognizeCubeFromImages(image1, image2, apiKey);
+    } else {
       return NextResponse.json(
-        { error: "두 장의 사진이 모두 필요합니다." },
+        { error: "사진 데이터가 올바르지 않습니다." },
         { status: 400 }
       );
     }
 
-    const painted = await recognizeCubeFromImages(image1, image2, apiKey);
     return NextResponse.json({ painted });
   } catch (error) {
     console.error("[recognize API error]", error);

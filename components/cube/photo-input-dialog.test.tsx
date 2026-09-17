@@ -1,5 +1,5 @@
 import type { Session } from "next-auth";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PhotoInputDialog } from "./photo-input-dialog";
 
@@ -55,7 +55,7 @@ describe("PhotoInputDialog", () => {
     ).toBeInTheDocument();
   });
 
-  it("허용된 관리자(debtor11@gmail.com)로 로그인된 경우 2장의 사진 등록 카드와 분석 버튼을 표시한다", () => {
+  it("허용된 관리자(debtor11@gmail.com)로 로그인된 경우 기본으로 6면 정면 촬영 모드가 노출된다", () => {
     vi.mocked(useSafeSession).mockReturnValue({
       data: { user: { email: "debtor11@gmail.com" } } as unknown as Session,
       status: "authenticated",
@@ -70,20 +70,29 @@ describe("PhotoInputDialog", () => {
       />
     );
 
-    expect(screen.getByText("인식률을 높이는 촬영 가이드")).toBeInTheDocument();
-    expect(screen.getByText("1번 사진 (위·앞·오른쪽)")).toBeInTheDocument();
-    expect(screen.getByText("2번 사진 (아래·뒤·왼쪽)")).toBeInTheDocument();
-    expect(screen.getByText(/위: 흰색/)).toBeInTheDocument();
-    expect(screen.getByText(/앞: 초록색/)).toBeInTheDocument();
-    expect(screen.getByText(/오른쪽: 빨간색/)).toBeInTheDocument();
-    expect(screen.getByText(/아래: 노란색/)).toBeInTheDocument();
-    expect(screen.getByText(/뒤: 파란색/)).toBeInTheDocument();
-    expect(screen.getByText(/왼쪽: 주황색/)).toBeInTheDocument();
+    // 6면 가이드 및 6개 면 카드 기본 노출 확인
+    expect(
+      screen.getByText("6면 정면 촬영 가이드 (가장 정확한 인식)")
+    ).toBeInTheDocument();
+    expect(screen.getByText("1. 윗면 (U)")).toBeInTheDocument();
+    expect(screen.getByText("2. 아랫면 (D)")).toBeInTheDocument();
+    expect(screen.getByText("3. 앞면 (F)")).toBeInTheDocument();
+    expect(screen.getByText("4. 뒷면 (B)")).toBeInTheDocument();
+    expect(screen.getByText("5. 오른쪽면 (R)")).toBeInTheDocument();
+    expect(screen.getByText("6. 왼쪽면 (L)")).toBeInTheDocument();
 
     const analyzeBtn = screen.getByRole("button", {
       name: "AI로 색상 분석하기",
     });
     expect(analyzeBtn).toBeInTheDocument();
     expect(analyzeBtn).toBeDisabled();
+
+    // 대각선 2장 촬영 탭 클릭 시 2장 촬영 UI로 전환 확인
+    fireEvent.click(screen.getByText(/대각선 2장 촬영/));
+    expect(
+      screen.getByText("인식률을 높이는 대각선 촬영 가이드")
+    ).toBeInTheDocument();
+    expect(screen.getByText("1번 사진 (위·앞·오른쪽)")).toBeInTheDocument();
+    expect(screen.getByText("2번 사진 (아래·뒤·왼쪽)")).toBeInTheDocument();
   });
 });

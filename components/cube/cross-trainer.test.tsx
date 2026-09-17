@@ -706,5 +706,48 @@ describe("공식 반복 횟수 및 목표 상태 안내 (formula-repeat-guidance
   });
 });
 
+describe("키보드 단축키 (Enter 키로 다음 동작 실행)", () => {
+  it("가이드 화면에서 Enter 키를 누르면 마우스 클릭과 동일하게 다음 동작이 실행된다", async () => {
+    // 1수 남은 큐브
+    const oneMoveFromCross = applyMoves(solvedCube(), [{ face: "F", clockwise: false }]);
+    render(<CrossTrainer initialPainted={oneMoveFromCross} />);
+    fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
+
+    expect(screen.getByText("1단계: 흰 십자가")).toBeInTheDocument();
+    const nextBtn = screen.getByRole("button", { name: "다음 동작" });
+    expect(nextBtn).not.toBeDisabled();
+
+    // Enter 키 누름
+    fireEvent.keyDown(window, { key: "Enter" });
+
+    // 회전 레이어가 나타나고 버튼이 비활성화됨
+    const turnLayer = await screen.findByTestId("turn-layer");
+    expect(turnLayer).toBeInTheDocument();
+    expect(nextBtn).toBeDisabled();
+
+    // 회전 완료 처리
+    fireEvent.click(turnLayer);
+
+    // 1단계 완료 화면 노출
+    await waitFor(() => {
+      expect(screen.getByText("🎉 1단계 흰 십자가가 완성되었어요!")).toBeInTheDocument();
+    });
+  });
+
+  it("다음 동작이 비활성화(disabled)된 상태에서는 Enter 키를 눌러도 동작하지 않는다", () => {
+    render(<CrossTrainer initialPainted={solvedCube()} />);
+    fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
+
+    // 이미 완성된 상태 -> 다음 동작 버튼이 disabled 상태
+    const nextBtn = screen.getByRole("button", { name: "다음 동작" });
+    expect(nextBtn).toBeDisabled();
+
+    // Enter 키를 눌러도 회전 레이어가 생성되지 않고 완료 상태 유지
+    fireEvent.keyDown(window, { key: "Enter" });
+    expect(screen.queryByTestId("turn-layer")).not.toBeInTheDocument();
+    expect(screen.getByText("이미 큐브가 모두 완성되어 있어요. 돌릴 것이 없어요.")).toBeInTheDocument();
+  });
+});
+
 
 

@@ -18,6 +18,13 @@ test("5단계: 노란 십자가 옆면 맞추기 안내와 8동작 공식 묶음
   await expect(page.getByText("5단계: 노란 십자가 옆면", { exact: true })).toBeVisible();
   await expect(page.getByText(/5단계: 노란 십자가 옆면 맞추기란\?/)).toBeVisible();
 
+  // 첫 동작이 정렬 회전일 경우 공식 카드(지금 상황)가 보일 때까지 다음 동작 진행
+  const situationEl = page.getByText("지금 상황");
+  while (!await situationEl.isVisible() && await page.getByRole("button", { name: "다음 동작" }).isEnabled()) {
+    await page.getByRole("button", { name: "다음 동작" }).click();
+    await page.waitForTimeout(600);
+  }
+
   // 공식 조건 / 지금 상황 / 조각 화살표 확인
   await expect(page.getByText("지금 상황")).toBeVisible();
   await expect(page.getByText("공식 조건")).toBeVisible();

@@ -19,3 +19,20 @@ test("무작위로 채우고 큐브 맞추기 시작을 누르면 3D 큐브 가�
   await expect(page.getByRole("button", { name: "다음 동작" })).toBeVisible();
   await expect(page.getByRole("button", { name: "처음부터 다시" })).toBeVisible();
 });
+
+test("가이드 화면에서 엔터(Enter) 키를 누르면 다음 동작이 실행된다", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "무작위로 채우기" }).click();
+  await page.getByRole("button", { name: "큐브 맞추기 시작" }).click();
+
+  const nextBtn = page.getByRole("button", { name: "다음 동작" });
+  await expect(nextBtn).toBeVisible();
+  await expect(nextBtn).toHaveAttribute("aria-keyshortcuts", "Enter");
+
+  // 엔터 키 누름
+  await page.keyboard.press("Enter");
+
+  // 동작 실행 중 버튼이 비활성화됨
+  await expect(nextBtn).toBeDisabled();
+});

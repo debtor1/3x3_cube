@@ -51,6 +51,7 @@ type Props = {
   readonly turning: Turning | null;
   readonly onTurnEnd: () => void;
   readonly indicators?: readonly PieceIndicator[];
+  readonly scale?: number;
 };
 
 /** 표시된 조각이 큐브 밖으로 나오는 거리. 한 칸의 1/4쯤이면 떨어져 보이면서도 어느 자리인지 알아볼 수 있다. */
@@ -178,7 +179,13 @@ function Cubie({
   );
 }
 
-export function CubeView({ cube, turning, onTurnEnd, indicators }: Props) {
+export function CubeView({
+  cube,
+  turning,
+  onTurnEnd,
+  indicators,
+  scale = 1,
+}: Props) {
   const [view, setView] = useState({ pitch: -24, yaw: -34 });
   const drag = useRef<{ x: number; y: number } | null>(null);
 
@@ -263,51 +270,60 @@ export function CubeView({ cube, turning, onTurnEnd, indicators }: Props) {
       }}
     >
       <div
+        data-testid="cube-scene-scale"
         className="absolute inset-0"
         style={{
           transformStyle: "preserve-3d",
-          transform: `rotateX(${view.pitch}deg) rotateY(${view.yaw}deg)`,
+          transform: `scale3d(${scale}, ${scale}, ${scale})`,
         }}
       >
-        {resting.map((position) => (
-          <Cubie
-            key={position.join(",")}
-            position={position}
-            cube={cube}
-            marked={isMarked(position)}
-          />
-        ))}
-
-        {turning ? (
-          <div
-            key={turning.token}
-            data-testid="turn-layer"
-            className="absolute inset-0 animate-cube-turn"
-            style={{ transformStyle: "preserve-3d", ...spinStyle() }}
-            onAnimationEnd={onTurnEnd}
-            onClick={onTurnEnd}
-          >
-            {spinning.map((position) => (
-              <Cubie key={position.join(",")} position={position} cube={cube} />
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      {/* 큐브 본체와 분리된 층. 뒤편 조각의 고리도 큐브에 가리지 않고 비쳐 보인다. */}
-      {shownMarks.length > 0 ? (
         <div
-          className="pointer-events-none absolute inset-0"
+          className="absolute inset-0"
           style={{
             transformStyle: "preserve-3d",
             transform: `rotateX(${view.pitch}deg) rotateY(${view.yaw}deg)`,
           }}
         >
-          {shownMarks.map((mark) => (
-            <PieceRing key={mark.position.join(",")} indicator={mark} view={view} />
+          {resting.map((position) => (
+            <Cubie
+              key={position.join(",")}
+              position={position}
+              cube={cube}
+              marked={isMarked(position)}
+            />
           ))}
+
+          {turning ? (
+            <div
+              key={turning.token}
+              data-testid="turn-layer"
+              className="absolute inset-0 animate-cube-turn"
+              style={{ transformStyle: "preserve-3d", ...spinStyle() }}
+              onAnimationEnd={onTurnEnd}
+              onClick={onTurnEnd}
+            >
+              {spinning.map((position) => (
+                <Cubie key={position.join(",")} position={position} cube={cube} />
+              ))}
+            </div>
+          ) : null}
         </div>
-      ) : null}
+
+        {/* 큐브 본체와 분리된 층. 뒤편 조각의 고리도 큐브에 가리지 않고 비쳐 보인다. */}
+        {shownMarks.length > 0 ? (
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              transformStyle: "preserve-3d",
+              transform: `rotateX(${view.pitch}deg) rotateY(${view.yaw}deg)`,
+            }}
+          >
+            {shownMarks.map((mark) => (
+              <PieceRing key={mark.position.join(",")} indicator={mark} view={view} />
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

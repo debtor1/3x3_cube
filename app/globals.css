@@ -129,6 +129,17 @@
     @apply font-serif;
   }
 }
+
+[data-font-scale] {
+  --text-xs: calc(0.75rem * var(--font-scale, 1));
+  --text-sm: calc(0.875rem * var(--font-scale, 1));
+  --text-base: calc(1rem * var(--font-scale, 1));
+  --text-lg: calc(1.125rem * var(--font-scale, 1));
+  --text-xl: calc(1.25rem * var(--font-scale, 1));
+  --text-2xl: calc(1.5rem * var(--font-scale, 1));
+  --text-3xl: calc(1.875rem * var(--font-scale, 1));
+}
+
 /* 큐브 한 층이 도는 동안만 쓰는 회전. 축과 각도는 컴포넌트가 넘긴다. */
 @keyframes cube-turn {
   from {

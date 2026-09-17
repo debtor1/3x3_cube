@@ -70,8 +70,15 @@ describe("PhotoInputDialog", () => {
       />
     );
 
+    expect(screen.getByText("인식률을 높이는 촬영 가이드")).toBeInTheDocument();
     expect(screen.getByText("1번 사진 (위·앞·오른쪽)")).toBeInTheDocument();
     expect(screen.getByText("2번 사진 (아래·뒤·왼쪽)")).toBeInTheDocument();
+    expect(screen.getByText(/위: 흰색/)).toBeInTheDocument();
+    expect(screen.getByText(/앞: 초록색/)).toBeInTheDocument();
+    expect(screen.getByText(/오른쪽: 빨간색/)).toBeInTheDocument();
+    expect(screen.getByText(/아래: 노란색/)).toBeInTheDocument();
+    expect(screen.getByText(/뒤: 파란색/)).toBeInTheDocument();
+    expect(screen.getByText(/왼쪽: 주황색/)).toBeInTheDocument();
 
     const analyzeBtn = screen.getByRole("button", {
       name: "AI로 색상 분석하기",

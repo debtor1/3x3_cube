@@ -1,0 +1,24 @@
+import { describe, expect, it } from "vitest";
+import { compressImage } from "./image-compress";
+
+describe("compressImage", () => {
+  it("파일을 읽어 Data URL 문자열을 반환한다", async () => {
+    // 1x1 투명 gif 더미 파일 생성
+    const blob = new Blob(
+      [
+        Uint8Array.from([
+          0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80,
+          0x00, 0x00, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x21, 0xf9, 0x04,
+          0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01,
+          0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b,
+        ]),
+      ],
+      { type: "image/gif" }
+    );
+    const file = new File([blob], "test.gif", { type: "image/gif" });
+
+    const result = await compressImage(file);
+    expect(result).toBeDefined();
+    expect(result.startsWith("data:image/")).toBe(true);
+  });
+});

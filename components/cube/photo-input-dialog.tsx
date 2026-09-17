@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { compressImage } from "@/lib/cube/image-compress";
 import type { Color } from "@/lib/cube/state";
 
 type Props = {
@@ -32,7 +33,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
   const fileInputRef1 = useRef<HTMLInputElement>(null);
   const fileInputRef2 = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (
+  const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
     setImage: (url: string | null) => void
   ) => {
@@ -44,14 +45,15 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImage(reader.result as string);
+    try {
       setError(null);
-    };
-    reader.readAsDataURL(file);
-    // 동일 파일 재선택 가능하게 리셋
-    e.target.value = "";
+      const compressedUrl = await compressImage(file);
+      setImage(compressedUrl);
+    } catch {
+      setError("이미지를 불러오는 중 문제가 발생했습니다.");
+    } finally {
+      e.target.value = "";
+    }
   };
 
   const handleAnalyze = async () => {
@@ -70,7 +72,18 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
         body: JSON.stringify({ image1, image2 }),
       });
 
-      const data = await response.json();
+      let data: { error?: string; painted?: readonly (Color | null)[] } = {};
+      try {
+        data = await response.json();
+      } catch {
+        if (response.status === 413) {
+          throw new Error("사진 파일 용량이 너무 큽니다. 사진 크기를 줄여주세요.");
+        }
+        if (response.status === 504) {
+          throw new Error("AI 응답 시간이 초과되었습니다. 다시 시도해주세요.");
+        }
+        throw new Error(`서버 오류가 발생했습니다 (${response.status})`);
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "사진 분석 중 오류가 발생했습니다.");
@@ -155,7 +168,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-6 py-2">
+          <div className="flex flex-col gap-5 py-2">
             {error ? (
               <Alert variant="destructive">
                 <AlertTitle>알림</AlertTitle>
@@ -163,17 +176,50 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
               </Alert>
             ) : null}
 
+            {/* 촬영 가이드 배너 */}
+            <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-xs dark:border-blue-900/50 dark:bg-blue-950/40">
+              <div className="flex items-center gap-1.5 font-semibold text-blue-950 dark:text-blue-200">
+                <span className="text-sm">📸</span>
+                <span>인식률을 높이는 촬영 가이드</span>
+              </div>
+              <ul className="mt-2 list-disc list-inside space-y-1 text-blue-900/90 dark:text-blue-300">
+                <li>
+                  <strong>6개 면이 3면씩 모두 나와야 해요:</strong> 1번과 2번 사진의 면이 겹치지 않고 완전 반대편 꼭짓점을 찍어야 6면 전체(54칸)가 인식됩니다.
+                </li>
+                <li>
+                  <strong>대각선 꼭짓점 구도:</strong> 3개 면이 한 화면에 골고루 보이도록 꼭짓점 정면에서 촬영해주세요.
+                </li>
+                <li>
+                  <strong>빛 반사 주의:</strong> 형광등 빛이 큐브에 강하게 반사되어 하얗게 날아가지 않도록 각도를 살짝 틀어주세요.
+                </li>
+              </ul>
+            </div>
+
             {/* 1번 사진 카드 */}
             <div className="flex flex-col gap-2 rounded-lg border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div>
                   <h4 className="text-sm font-semibold">1번 사진 (위·앞·오른쪽)</h4>
                   <p className="text-xs text-muted-foreground">
-                    흰색(위), 초록색(앞), 빨간색(오른쪽) 면이 한 번에 보이게 대각선에서 찍어주세요.
+                    위, 앞, 오른쪽 면이 한 번에 보이게 대각선 꼭짓점에서 찍어주세요.
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                    <span className="inline-flex items-center gap-1 rounded border border-neutral-300 bg-white px-1.5 py-0.5 font-medium text-neutral-800 shadow-xs dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+                      <span className="h-2 w-2 rounded-full border border-neutral-400 bg-white" />
+                      위: 흰색
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      앞: 초록색
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-300">
+                      <span className="h-2 w-2 rounded-full bg-rose-500" />
+                      오른쪽: 빨간색
+                    </span>
+                  </div>
                 </div>
                 {image1 ? (
-                  <span className="text-xs font-semibold text-primary">등록됨 ✓</span>
+                  <span className="shrink-0 text-xs font-semibold text-primary">등록됨 ✓</span>
                 ) : null}
               </div>
 
@@ -221,7 +267,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                     className="flex-1"
                     onClick={() => fileInputRef1.current?.click()}
                   >
-                    📷 사진 촬영 / 파일 선택
+                    📷 1번 사진 촬영 / 파일 선택
                   </Button>
                 </div>
               )}
@@ -229,15 +275,29 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
 
             {/* 2번 사진 카드 */}
             <div className="flex flex-col gap-2 rounded-lg border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div>
                   <h4 className="text-sm font-semibold">2번 사진 (아래·뒤·왼쪽)</h4>
                   <p className="text-xs text-muted-foreground">
-                    노란색(아래), 파란색(뒤), 주황색(왼쪽) 면이 한 번에 보이게 대각선에서 찍어주세요.
+                    큐브를 반대로 돌려 아래, 뒤, 왼쪽 면이 보이게 대각선 꼭짓점에서 찍어주세요.
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                    <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+                      <span className="h-2 w-2 rounded-full bg-amber-400" />
+                      아래: 노란색
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-300">
+                      <span className="h-2 w-2 rounded-full bg-blue-500" />
+                      뒤: 파란색
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded border border-orange-200 bg-orange-50 px-1.5 py-0.5 font-medium text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-300">
+                      <span className="h-2 w-2 rounded-full bg-orange-500" />
+                      왼쪽: 주황색
+                    </span>
+                  </div>
                 </div>
                 {image2 ? (
-                  <span className="text-xs font-semibold text-primary">등록됨 ✓</span>
+                  <span className="shrink-0 text-xs font-semibold text-primary">등록됨 ✓</span>
                 ) : null}
               </div>
 
@@ -285,7 +345,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                     className="flex-1"
                     onClick={() => fileInputRef2.current?.click()}
                   >
-                    📷 사진 촬영 / 파일 선택
+                    📷 2번 사진 촬영 / 파일 선택
                   </Button>
                 </div>
               )}

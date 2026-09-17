@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { describeMove } from "./guide";
-import { ALL_MOVES, applyMove, faceletsOf, solvedCube } from "./state";
+import { describeFaceAction, describeMove } from "./guide";
+import { ALL_MOVES, applyMove, type Cube, faceletsOf, solvedCube } from "./state";
 
 describe("describeMove", () => {
   it("어떤 안내에도 영어 회전 기호가 섞이지 않는다", () => {
@@ -39,5 +39,18 @@ describe("describeMove", () => {
 
     expect(describeMove(move).text).toContain("왼쪽으로");
     expect(left.slice(0, 3)).toEqual(["F", "F", "F"]);
+  });
+
+  it("큐브 통째 회전 안내에도 영어 회전 기호가 없고 통째 표시가 붙는다", () => {
+    const wholeRotate = {
+      type: "rotateCube" as const,
+      clockwise: true,
+      reason: "다음 꼭짓점을 맞추기 위해 큐브를 통째로 돌려요",
+      apply: (c: Cube) => c,
+    };
+    const guide = describeFaceAction(wholeRotate);
+    expect(guide.text).not.toMatch(/[A-Za-z]/);
+    expect(guide.text).toContain("통째로");
+    expect(guide.isWholeCube).toBe(true);
   });
 });

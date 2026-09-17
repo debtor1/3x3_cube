@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AXIS_VECTOR, LAYER_SPIN, type SpinAxis, spinAngle } from "./spin";
+import { AXIS_VECTOR, LAYER_SPIN, type SpinAxis, facesViewer, spinAngle } from "./spin";
 import {
   CUBIE_POSITIONS,
   FACES,
@@ -82,5 +82,35 @@ describe("spinAngle", () => {
       expect(vector.filter((value) => value === 1)).toHaveLength(1);
       expect(vector.filter((value) => value === 0)).toHaveLength(2);
     }
+  });
+});
+
+describe("facesViewer", () => {
+  it("정면으로 보면 앞쪽 조각은 보이고 뒤쪽 조각은 보이지 않는다", () => {
+    const straightOn = { pitch: 0, yaw: 0 };
+
+    expect(facesViewer([0, 0, 1], straightOn)).toBe(true);
+    expect(facesViewer([0, 0, -1], straightOn)).toBe(false);
+  });
+
+  it("큐브를 반 바퀴 돌리면 앞뒤가 뒤집힌다", () => {
+    const halfTurned = { pitch: 0, yaw: 180 };
+
+    expect(facesViewer([0, 0, 1], halfTurned)).toBe(false);
+    expect(facesViewer([0, 0, -1], halfTurned)).toBe(true);
+  });
+
+  it("위에서 내려다보면 윗면 조각이 보이고 아랫면 조각은 보이지 않는다", () => {
+    const fromAbove = { pitch: -90, yaw: 0 };
+
+    expect(facesViewer([0, 1, 0], fromAbove)).toBe(true);
+    expect(facesViewer([0, -1, 0], fromAbove)).toBe(false);
+  });
+
+  it("오른쪽으로 90도 돌리면 오른면 조각이 앞으로 온다", () => {
+    const quarterTurned = { pitch: 0, yaw: -90 };
+
+    expect(facesViewer([1, 0, 0], quarterTurned)).toBe(true);
+    expect(facesViewer([-1, 0, 0], quarterTurned)).toBe(false);
   });
 });

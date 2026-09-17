@@ -29,3 +29,25 @@ export const AXIS_VECTOR: Record<SpinAxis, Vec3> = {
 export function spinAngle(face: Face, clockwise: boolean): number {
   return LAYER_SPIN[face].sign * (clockwise ? 90 : -90);
 }
+
+/** 아이가 큐브를 돌려 놓은 각도. */
+export type ViewAngle = { readonly pitch: number; readonly yaw: number };
+
+const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+/** 조각이 지금 각도에서 화면 앞쪽을 향하는지. 뒤를 향하면 표시를 다르게 보여 준다. */
+export function facesViewer(position: Vec3, view: ViewAngle): boolean {
+  const [x, y, z] = position;
+
+  // 화면 좌표는 아래가 y 양수라 논리 좌표와 부호가 갈린다.
+  const dy = -y;
+
+  const yaw = toRadians(view.yaw);
+  const pitch = toRadians(view.pitch);
+
+  // rotateY 뒤에 rotateX. 화면 쪽으로 나오는 성분(z)만 있으면 된다.
+  const afterYawZ = -x * Math.sin(yaw) + z * Math.cos(yaw);
+  const towardViewer = dy * Math.sin(pitch) + afterYawZ * Math.cos(pitch);
+
+  return towardViewer > 0;
+}

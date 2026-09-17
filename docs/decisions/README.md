@@ -4,3 +4,4 @@
 
 - [ui-composition](ui-composition.md) — Read when choosing UI components, page composition, visual tokens, or custom interface boundaries.
 - [guidance-surface](guidance-surface.md) — Read when presenting cube moves to the learner, or changing how a move is shown, labeled, or stepped through.
+- [solving-method](solving-method.md) — Read when deciding how a step's move sequence is produced, or how many formulas a step asks the learner to memorize.

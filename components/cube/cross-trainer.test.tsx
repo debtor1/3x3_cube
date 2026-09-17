@@ -749,5 +749,35 @@ describe("키보드 단축키 (Enter 키로 다음 동작 실행)", () => {
   });
 });
 
+describe("데스크톱(PC) 가로 2열 분할 레이아웃 (desktop-horizontal-layout)", () => {
+  it("수용 기준 1 & 2 & 3: 가이드 화면에서 2열 그리드와 좌측 큐브, 우측 설명 컨테이너가 올바른 반응형 클래스를 갖는다", () => {
+    const scr = randomCube();
+    render(<CrossTrainer initialPainted={scr} />);
+    fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
+
+    const container = screen.getByTestId("guide-layout-container");
+    expect(container).toHaveClass("lg:grid");
+    expect(container).toHaveClass("lg:grid-cols-12");
+
+    const cubeCol = screen.getByTestId("cube-column");
+    expect(cubeCol).toHaveClass("lg:col-span-5");
+    expect(cubeCol).toHaveClass("lg:sticky");
+
+    const guideCol = screen.getByTestId("guide-column");
+    expect(guideCol).toHaveClass("lg:col-span-7");
+
+    // 우측 열 내부에 조작 버튼이 포함되어 있음
+    expect(guideCol).toContainElement(screen.getByRole("button", { name: "다음 동작" }));
+    expect(guideCol).toContainElement(screen.getByRole("button", { name: "이전 동작" }));
+  });
+
+  it("수용 기준 4: 색상 입력 첫 화면에서는 중앙 집중형 max-w-xl 레이아웃을 유지한다", () => {
+    const { container } = render(<CrossTrainer />);
+    const section = container.querySelector("section");
+    expect(section).toHaveClass("max-w-xl");
+    expect(section).toHaveClass("mx-auto");
+  });
+});
+
 
 

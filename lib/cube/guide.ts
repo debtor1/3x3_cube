@@ -41,3 +41,22 @@ export function describeMove(move: Move): MoveGuide {
   const turn = TURNS[move.face];
   return move.clockwise ? turn.clockwise : turn.counter;
 }
+
+export type ActionGuide = MoveGuide & {
+  readonly isWholeCube?: boolean;
+};
+
+export function describeFaceAction(action: {
+  readonly type: "move" | "rotateCube";
+  readonly move?: Move;
+  readonly clockwise?: boolean;
+}): ActionGuide {
+  if (action.type === "move" && action.move) {
+    return describeMove(action.move);
+  }
+  return {
+    text: action.clockwise ? "큐브를 통째로 왼쪽으로 돌려요" : "큐브를 통째로 오른쪽으로 돌려요",
+    arrow: "🔄",
+    isWholeCube: true,
+  };
+}

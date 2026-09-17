@@ -21,3 +21,12 @@ export const COLOR_VALUES: Record<Color, string> = {
 };
 
 export const PAINT_ORDER: readonly Color[] = ["U", "F", "R", "B", "L", "D"];
+
+/**
+ * 조각 위치를 알려 주는 표시의 색.
+ * 큐브 여섯 색과 겹치면 표시인지 조각 색인지 구별되지 않으므로 겹치지 않는 색으로 둔다.
+ */
+export const INDICATOR_COLORS: Record<"source" | "target", string> = {
+  source: "#7c3aed",
+  target: "#ec4899",
+};

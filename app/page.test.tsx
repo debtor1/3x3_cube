@@ -3,13 +3,13 @@ import { expect, test } from "vitest";
 
 import Home from "@/app/page";
 
-test("첫 화면은 큐브 색을 칠하라고 안내하고, 다 칠하기 전에는 길 찾기를 막는다", () => {
+test("첫 화면은 큐브 색을 칠하라고 안내하고, 다 칠하기 전에는 큐브 맞추기 시작을 막는다", () => {
   render(<Home />);
 
   expect(
     screen.getByRole("heading", { level: 1, name: /큐브 색을 알려 주세요/ })
   ).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "길 찾기" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "큐브 맞추기 시작" })).toBeDisabled();
   expect(screen.getByText(/48칸 더 칠하면 돼요/)).toBeInTheDocument();
 });
 

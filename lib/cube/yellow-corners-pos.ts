@@ -26,6 +26,9 @@ export type YellowCornersPosAction =
       readonly formula?: string;
       readonly formulaIndex?: number; // 1 ~ 8
       readonly totalInFormula?: number; // 8
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly posCase?: YellowCornersPosCase;
     }
   | {
@@ -39,6 +42,9 @@ export type YellowCornersPosAction =
       readonly formula?: string;
       readonly formulaIndex?: number;
       readonly totalInFormula?: number;
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly posCase?: YellowCornersPosCase;
       apply(cube: Cube): Cube;
     }
@@ -279,5 +285,33 @@ export function solveYellowCornersPos(cube: Cube): {
     }
   }
 
-  return { actions };
+  // 생성된 공식 액션들에 반복 회차 및 목표 주입
+  const totalFormulaSets = actions.filter(
+    (a) => a.type === "move" && a.formulaIndex === 1
+  ).length;
+
+  let formulaSetCount = 0;
+  const annotatedActions: YellowCornersPosAction[] = actions.map((act) => {
+    if (act.type === "move" && act.formulaIndex === 1) {
+      formulaSetCount++;
+    }
+    if (act.formula) {
+      const repeatIndex = formulaSetCount;
+      const totalRepeats = totalFormulaSets;
+      const formulaGoal =
+        totalFormulaSets > 1
+          ? `🎯 목표: 4개 꼭짓점이 모두 제자리를 찾을 때까지 반복해요 (${repeatIndex} / ${totalRepeats}회차)`
+          : "🎯 목표: 4개 꼭짓점이 모두 제자리를 찾을 때까지 공식을 실행해요";
+
+      return {
+        ...act,
+        repeatIndex,
+        totalRepeats,
+        formulaGoal,
+      };
+    }
+    return act;
+  });
+
+  return { actions: annotatedActions };
 }

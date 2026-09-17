@@ -26,6 +26,9 @@ export type YellowCrossEdgesAction =
       readonly formula?: string;
       readonly formulaIndex?: number; // 1 ~ 8
       readonly totalInFormula?: number; // 8
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly edgesCase?: YellowCrossEdgesCase;
     }
   | {
@@ -39,6 +42,9 @@ export type YellowCrossEdgesAction =
       readonly formula?: string;
       readonly formulaIndex?: number;
       readonly totalInFormula?: number;
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly edgesCase?: YellowCrossEdgesCase;
       apply(cube: Cube): Cube;
     }
@@ -386,5 +392,35 @@ export function solveYellowCrossEdges(initialCube: Cube): {
     }
   }
 
-  return { actions };
+  // 생성된 공식 액션들에 반복 회차 및 목표 주입
+  const totalFormulaSets = actions.filter(
+    (a) => a.type === "move" && a.formulaIndex === 1
+  ).length;
+
+  let formulaSetCount = 0;
+  const annotatedActions: YellowCrossEdgesAction[] = actions.map((act) => {
+    if (act.type === "move" && act.formulaIndex === 1) {
+      formulaSetCount++;
+    }
+    if (act.formula) {
+      const repeatIndex = formulaSetCount;
+      const totalRepeats = totalFormulaSets;
+      const formulaGoal =
+        totalFormulaSets > 1
+          ? repeatIndex === 1
+            ? "🎯 형태: 이웃한 2면이 맞는 모양을 만들기 위해 공식을 돌려요 (1 / 2회차)"
+            : "🎯 목표: 4개 모서리의 옆면 색이 모두 맞을 때까지 반복해요 (2 / 2회차)"
+          : "🎯 목표: 4개 모서리의 옆면 색이 모두 맞을 때까지 반복해요";
+
+      return {
+        ...act,
+        repeatIndex,
+        totalRepeats,
+        formulaGoal,
+      };
+    }
+    return act;
+  });
+
+  return { actions: annotatedActions };
 }

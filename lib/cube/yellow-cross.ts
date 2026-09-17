@@ -23,6 +23,9 @@ export type YellowCrossAction =
       readonly formula?: string;
       readonly formulaIndex?: number; // 1 ~ 6
       readonly totalInFormula?: number; // 6
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly yellowCrossCase?: YellowCrossCase;
     }
   | {
@@ -36,6 +39,9 @@ export type YellowCrossAction =
       readonly formula?: string;
       readonly formulaIndex?: number;
       readonly totalInFormula?: number;
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly yellowCrossCase?: YellowCrossCase;
       apply(cube: Cube): Cube;
     }
@@ -146,6 +152,9 @@ export function solveYellowCross(initialCube: Cube): { actions: YellowCrossActio
       formula?: string;
       formulaIndex?: number;
       totalInFormula?: number;
+      repeatIndex?: number;
+      totalRepeats?: number;
+      formulaGoal?: string;
       yellowCrossCase?: YellowCrossCase;
     }
   ) {
@@ -161,12 +170,22 @@ export function solveYellowCross(initialCube: Cube): { actions: YellowCrossActio
       formula: meta?.formula,
       formulaIndex: meta?.formulaIndex,
       totalInFormula: meta?.totalInFormula,
+      repeatIndex: meta?.repeatIndex,
+      totalRepeats: meta?.totalRepeats,
+      formulaGoal: meta?.formulaGoal,
       yellowCrossCase: meta?.yellowCrossCase,
     });
   }
 
   // 6동작 노란 십자가 공식: F (R U R' U') F'
-  function executeCrossFormula(currentCase: YellowCrossCase) {
+  function executeCrossFormula(
+    currentCase: YellowCrossCase,
+    repeatMeta?: {
+      readonly repeatIndex: number;
+      readonly totalRepeats: number;
+      readonly formulaGoal: string;
+    }
+  ) {
     const formulaName = "노란 십자가 공식";
     const situation =
       currentCase === "dot"
@@ -213,6 +232,9 @@ export function solveYellowCross(initialCube: Cube): { actions: YellowCrossActio
         formula: formulaName,
         formulaIndex: 1,
         totalInFormula: 6,
+        repeatIndex: repeatMeta?.repeatIndex,
+        totalRepeats: repeatMeta?.totalRepeats,
+        formulaGoal: repeatMeta?.formulaGoal,
         yellowCrossCase: currentCase,
         reason: "앞면을 시계 방향으로 오른쪽으로 눕혀요",
         situation,
@@ -235,6 +257,9 @@ export function solveYellowCross(initialCube: Cube): { actions: YellowCrossActio
         formula: formulaName,
         formulaIndex: 2 + idx,
         totalInFormula: 6,
+        repeatIndex: repeatMeta?.repeatIndex,
+        totalRepeats: repeatMeta?.totalRepeats,
+        formulaGoal: repeatMeta?.formulaGoal,
         yellowCrossCase: currentCase,
         reason: text,
         situation,
@@ -251,6 +276,9 @@ export function solveYellowCross(initialCube: Cube): { actions: YellowCrossActio
         formula: formulaName,
         formulaIndex: 6,
         totalInFormula: 6,
+        repeatIndex: repeatMeta?.repeatIndex,
+        totalRepeats: repeatMeta?.totalRepeats,
+        formulaGoal: repeatMeta?.formulaGoal,
         yellowCrossCase: currentCase,
         reason: "앞면을 반시계 방향으로 세워 원위치해요",
         situation,
@@ -260,6 +288,9 @@ export function solveYellowCross(initialCube: Cube): { actions: YellowCrossActio
       }
     );
   }
+
+  const initialCase = getYellowCrossCase(cube);
+  const totalRepeats = initialCase === "dot" ? 3 : initialCase === "hook" ? 2 : 1;
 
   let passes = 0;
   while (!isYellowCrossSolved(cube) && passes < 6) {
@@ -272,7 +303,11 @@ export function solveYellowCross(initialCube: Cube): { actions: YellowCrossActio
 
     if (currentCase === "dot") {
       // 점 모양: 정렬 회전 없이 바로 공식 실행
-      executeCrossFormula("dot");
+      executeCrossFormula("dot", {
+        repeatIndex: 1,
+        totalRepeats,
+        formulaGoal: "🎯 형태: 점 ➔ ㄱ자 ➔ 일자 ➔ 십자가 (현재: 점 ➔ 다음: ㄱ자)",
+      });
     } else if (currentCase === "hook") {
       // ㄱ자 모양: 12시(UB)와 9시(UL)에 배치되도록 회전
       const targetHookPositions: PieceIndicator[] = [
@@ -320,7 +355,14 @@ export function solveYellowCross(initialCube: Cube): { actions: YellowCrossActio
         doHookAlign({ face: "U", clockwise: false });
       }
 
-      executeCrossFormula("hook");
+      executeCrossFormula("hook", {
+        repeatIndex: totalRepeats === 3 ? 2 : 1,
+        totalRepeats,
+        formulaGoal:
+          totalRepeats === 3
+            ? "🎯 형태: 점 ➔ ㄱ자 ➔ 일자 ➔ 십자가 (현재: ㄱ자 ➔ 다음: 일자)"
+            : "🎯 형태: ㄱ자 ➔ 일자 ➔ 십자가 (현재: ㄱ자 ➔ 다음: 일자)",
+      });
     } else if (currentCase === "line") {
       // 일자 모양: 가로(9시 UL와 3시 UR)로 오도록 회전
       const { isUF, isUB } = getUEdgeState(cube);
@@ -346,7 +388,16 @@ export function solveYellowCross(initialCube: Cube): { actions: YellowCrossActio
         );
       }
 
-      executeCrossFormula("line");
+      executeCrossFormula("line", {
+        repeatIndex: totalRepeats,
+        totalRepeats,
+        formulaGoal:
+          totalRepeats === 3
+            ? "🎯 형태: 점 ➔ ㄱ자 ➔ 일자 ➔ 십자가 (현재: 일자 ➔ 다음: 십자가 완성)"
+            : totalRepeats === 2
+              ? "🎯 형태: ㄱ자 ➔ 일자 ➔ 십자가 (현재: 일자 ➔ 다음: 십자가 완성)"
+              : "🎯 형태: 일자 ➔ 십자가 (현재: 일자 ➔ 다음: 십자가 완성)",
+      });
     }
   }
 

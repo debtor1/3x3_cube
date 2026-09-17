@@ -33,6 +33,9 @@ export type FaceAction =
       readonly formula?: string;
       readonly formulaIndex?: number; // 1 ~ 4
       readonly totalInFormula?: number; // 4
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly cornerIndex?: number; // 1 ~ 4
     }
   | {
@@ -160,6 +163,9 @@ export function solveWhiteFace(initialCube: Cube): {
       formula?: string;
       formulaIndex?: number;
       totalInFormula?: number;
+      repeatIndex?: number;
+      totalRepeats?: number;
+      formulaGoal?: string;
       cornerIndex?: number;
       reason?: string;
       situation?: string;
@@ -180,6 +186,9 @@ export function solveWhiteFace(initialCube: Cube): {
       formula: meta?.formula,
       formulaIndex: meta?.formulaIndex,
       totalInFormula: meta?.totalInFormula,
+      repeatIndex: meta?.repeatIndex,
+      totalRepeats: meta?.totalRepeats,
+      formulaGoal: meta?.formulaGoal,
       cornerIndex: meta?.cornerIndex,
     });
   }
@@ -190,13 +199,21 @@ export function solveWhiteFace(initialCube: Cube): {
     situation: string,
     condition: string,
     pieceGuide: PieceGuide,
-    indicators: readonly PieceIndicator[]
+    indicators: readonly PieceIndicator[],
+    repeatMeta?: {
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
+    }
   ) {
     TWIST_MOVES.forEach((m, idx) => {
       doMove(m, {
         formula: "트위스트",
         formulaIndex: idx + 1,
         totalInFormula: 4,
+        repeatIndex: repeatMeta?.repeatIndex,
+        totalRepeats: repeatMeta?.totalRepeats,
+        formulaGoal: repeatMeta?.formulaGoal,
         cornerIndex,
         reason,
         situation,
@@ -292,8 +309,24 @@ export function solveWhiteFace(initialCube: Cube): {
           doMove({ face: "D", clockwise: true }, alignMeta);
         }
 
+        // 맞출 자리에 조각을 넣기 위해 필요한 트위스트 횟수 사전 계산
+        let totalTwists = 0;
+        let testCube = cube;
+        while (!isCornerSolvedAtURF(testCube) && totalTwists < 6) {
+          for (const m of TWIST_MOVES) {
+            testCube = applyMove(testCube, m);
+          }
+          totalTwists++;
+        }
+
         let count = 0;
         while (!isCornerSolvedAtURF(cube) && count < 6) {
+          const repeatIndex = count + 1;
+          const formulaGoal =
+            totalTwists > 1
+              ? `🎯 목표: 흰색이 위를 볼 때까지 반복해요 (총 ${totalTwists}회 중 ${repeatIndex}회차)`
+              : "🎯 목표: 흰 꼭짓점을 윗자리로 올려 완성해요";
+
           doTwist(
             currentCorner,
             "흰 꼭짓점을 윗자리로 올려요",
@@ -303,7 +336,8 @@ export function solveWhiteFace(initialCube: Cube): {
             [
               { position: [1, 1, 1], label: "목표 자리", type: "target" },
               { position: [1, -1, 1], label: "맞출 조각", type: "source" },
-            ]
+            ],
+            { repeatIndex, totalRepeats: totalTwists, formulaGoal }
           );
           count++;
         }
@@ -311,15 +345,31 @@ export function solveWhiteFace(initialCube: Cube): {
         // D층에 없는 경우: URF에 있는지 또는 다른 U층에 있는지
         const urfColors = URF_STICKERS.map((s) => cube[s.idx]);
         if (cornerMatches(urfColors, targetColors)) {
+          let totalTwists = 0;
+          let testCube = cube;
+          while (!isCornerSolvedAtURF(testCube) && totalTwists < 6) {
+            for (const m of TWIST_MOVES) {
+              testCube = applyMove(testCube, m);
+            }
+            totalTwists++;
+          }
+
           let count = 0;
           while (!isCornerSolvedAtURF(cube) && count < 6) {
+            const repeatIndex = count + 1;
+            const formulaGoal =
+              totalTwists > 1
+                ? `🎯 목표: 흰색이 위를 볼 때까지 반복해요 (총 ${totalTwists}회 중 ${repeatIndex}회차)`
+                : "🎯 목표: 꼭짓점의 흰색이 위를 향하도록 방향을 맞춰요";
+
             doTwist(
               currentCorner,
               "꼭짓점의 흰색이 위를 향하도록 돌려요",
               "조각이 제자리에 있지만, 흰색이 위가 아닌 옆을 보고 있어요.",
               "방향을 바로잡을 꼭짓점을 '앞-오른쪽 위'에 둔 상태에서 공식을 실행해요.",
               { to: "오른쪽 위 앞 (제자리 회전)" },
-              [{ position: [1, 1, 1], label: "방향 맞출 조각", type: "target" }]
+              [{ position: [1, 1, 1], label: "방향 맞출 조각", type: "target" }],
+              { repeatIndex, totalRepeats: totalTwists, formulaGoal }
             );
             count++;
           }
@@ -330,7 +380,12 @@ export function solveWhiteFace(initialCube: Cube): {
             "다른 곳에 가야 할 엉뚱한 조각이 오른쪽 위 자리를 차지하고 있어요.",
             "잘못 들어간 조각을 '앞-오른쪽 위'에 둔 상태에서 공식을 1번 써서 아랫면으로 빼내요.",
             { from: "오른쪽 위 앞", to: "아랫면으로 빼내기" },
-            [{ position: [1, 1, 1], label: "빼낼 조각", type: "source" }]
+            [{ position: [1, 1, 1], label: "빼낼 조각", type: "source" }],
+            {
+              repeatIndex: 1,
+              totalRepeats: 1,
+              formulaGoal: "🎯 목표: 잘못 들어간 꼭짓점 조각을 아랫면으로 빼내요",
+            }
           );
         }
       }

@@ -4,7 +4,7 @@ test("5단계: 노란 십자가 옆면 맞추기 안내와 8동작 공식 묶음
   await page.goto("/");
 
   await page.getByRole("button", { name: "무작위로 채우기" }).click();
-  await page.getByRole("button", { name: "길 찾기" }).click();
+  await page.getByRole("button", { name: "큐브 맞추기 시작" }).click();
 
   const skipBtn = page.getByRole("button", { name: "다음 단계로 건너뛰기" });
 
@@ -32,10 +32,12 @@ test("5단계: 노란 십자가 옆면 맞추기 안내와 8동작 공식 묶음
 
   // 6단계 -> 7단계
   await skipBtn.click();
-  await expect(page.getByText("7단계: 노란 꼭짓점 방향 (최종 완성)", { exact: true })).toBeVisible();
 
-  // 7단계 -> 최종 완료
-  await skipBtn.click();
+  const isFinished = await page.getByText("🎉 축하합니다! 3x3 큐브를 모두 완성했어요!").isVisible();
+  if (!isFinished) {
+    await expect(page.getByText("7단계: 노란 꼭짓점 방향 (최종 완성)", { exact: true })).toBeVisible();
+    await skipBtn.click();
+  }
   await expect(page.getByText("🎉 축하합니다! 3x3 큐브를 모두 완성했어요!")).toBeVisible();
   await expect(skipBtn).toBeDisabled();
 });

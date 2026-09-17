@@ -4,7 +4,7 @@ test("6단계: 노란 꼭짓점 자리 맞추기 안내와 8동작 대칭 공식
   await page.goto("/");
 
   await page.getByRole("button", { name: "무작위로 채우기" }).click();
-  await page.getByRole("button", { name: "길 찾기" }).click();
+  await page.getByRole("button", { name: "큐브 맞추기 시작" }).click();
 
   const skipBtn = page.getByRole("button", { name: "다음 단계로 건너뛰기" });
 

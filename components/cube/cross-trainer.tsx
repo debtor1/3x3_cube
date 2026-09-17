@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { type CSSProperties, useState, useSyncExternalStore } from "react";
 
 import { ColorInput } from "@/components/cube/color-input";
 import { CubeView, type Turning } from "@/components/cube/cube-view";
+import { StageProgress } from "@/components/cube/stage-progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { isWhiteCrossSolved, solveWhiteCross } from "@/lib/cube/cross";
@@ -65,6 +66,9 @@ type UnifiedAction =
       readonly formula?: string;
       readonly formulaIndex?: number;
       readonly totalInFormula?: number;
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly cornerIndex?: number;
       readonly edgeIndex?: number;
       readonly secondLayerCase?: SecondLayerCase;
@@ -87,6 +91,9 @@ type UnifiedAction =
       readonly formula?: string;
       readonly formulaIndex?: number;
       readonly totalInFormula?: number;
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly cornerIndex?: number;
       readonly edgeIndex?: number;
       readonly secondLayerCase?: SecondLayerCase;
@@ -109,6 +116,9 @@ type UnifiedAction =
       readonly formula?: string;
       readonly formulaIndex?: number;
       readonly totalInFormula?: number;
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly cornerIndex?: number;
       readonly edgeIndex?: number;
       readonly secondLayerCase?: SecondLayerCase;
@@ -141,6 +151,166 @@ function blankPaint(): (Color | null)[] {
     cells[position * 9 + 4] = face;
   });
   return cells;
+}
+
+/** 글자 크기 4단계: 축소(85%), 보통(100%), 확대(115%), 최대(130%) */
+export const FONT_SCALES = [0.85, 1.0, 1.15, 1.3] as const;
+/** 3D 큐브 크기 3단계: 축소(0.8x), 보통(1.0x), 확대(1.2x) */
+export const CUBE_SCALES = [0.8, 1.0, 1.2] as const;
+
+export const FONT_SCALE_STORAGE_KEY = "cube_trainer_font_scale_index";
+export const CUBE_SCALE_STORAGE_KEY = "cube_trainer_cube_scale_index";
+
+let fontScaleListeners: Array<() => void> = [];
+let cubeScaleListeners: Array<() => void> = [];
+
+export function setStoredFontScaleIndex(next: number) {
+  try {
+    localStorage.setItem(FONT_SCALE_STORAGE_KEY, String(next));
+  } catch {}
+  fontScaleListeners.forEach((listener) => listener());
+}
+
+export function setStoredCubeScaleIndex(next: number) {
+  try {
+    localStorage.setItem(CUBE_SCALE_STORAGE_KEY, String(next));
+  } catch {}
+  cubeScaleListeners.forEach((listener) => listener());
+}
+
+function subscribeFontScale(callback: () => void) {
+  fontScaleListeners.push(callback);
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", callback);
+  }
+  return () => {
+    fontScaleListeners = fontScaleListeners.filter((l) => l !== callback);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("storage", callback);
+    }
+  };
+}
+
+function subscribeCubeScale(callback: () => void) {
+  cubeScaleListeners.push(callback);
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", callback);
+  }
+  return () => {
+    cubeScaleListeners = cubeScaleListeners.filter((l) => l !== callback);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("storage", callback);
+    }
+  };
+}
+
+function getStoredFontScaleIndex(): number {
+  if (typeof window === "undefined") return 1;
+  try {
+    const saved = localStorage.getItem(FONT_SCALE_STORAGE_KEY);
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 0 && parsed < FONT_SCALES.length) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return 1;
+}
+
+function getStoredCubeScaleIndex(): number {
+  if (typeof window === "undefined") return 1;
+  try {
+    const saved = localStorage.getItem(CUBE_SCALE_STORAGE_KEY);
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 0 && parsed < CUBE_SCALES.length) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return 1;
+}
+
+function ScaleControls({
+  fontScaleIndex,
+  cubeScaleIndex,
+  onFontScaleDown,
+  onFontScaleUp,
+  onCubeScaleDown,
+  onCubeScaleUp,
+}: {
+  readonly fontScaleIndex: number;
+  readonly cubeScaleIndex: number;
+  readonly onFontScaleDown: () => void;
+  readonly onFontScaleUp: () => void;
+  readonly onCubeScaleDown: () => void;
+  readonly onCubeScaleUp: () => void;
+}) {
+  return (
+    <div
+      className="flex items-center gap-3 text-xs"
+      aria-label="화면 크기 조절"
+    >
+      {/* 글자 크기 조절 */}
+      <div className="flex items-center gap-1.5">
+        <span className="font-medium text-muted-foreground select-none">글자</span>
+        <div className="inline-flex items-center rounded-md border border-input bg-background p-0.5 shadow-xs">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-sm text-sm"
+            onClick={onFontScaleDown}
+            disabled={fontScaleIndex <= 0}
+            aria-label="글자 크기 축소"
+          >
+            −
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-sm text-sm"
+            onClick={onFontScaleUp}
+            disabled={fontScaleIndex >= FONT_SCALES.length - 1}
+            aria-label="글자 크기 확대"
+          >
+            +
+          </Button>
+        </div>
+      </div>
+
+      {/* 큐브 크기 조절 */}
+      <div className="flex items-center gap-1.5">
+        <span className="font-medium text-muted-foreground select-none">큐브</span>
+        <div className="inline-flex items-center rounded-md border border-input bg-background p-0.5 shadow-xs">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-sm text-sm"
+            onClick={onCubeScaleDown}
+            disabled={cubeScaleIndex <= 0}
+            aria-label="큐브 크기 축소"
+          >
+            −
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-sm text-sm"
+            onClick={onCubeScaleUp}
+            disabled={cubeScaleIndex >= CUBE_SCALES.length - 1}
+            aria-label="큐브 크기 확대"
+          >
+            +
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function CrossTrainer({
@@ -185,6 +355,36 @@ export function CrossTrainer({
   const [turn, setTurn] = useState<TurnState | null>(null);
   const [issued, setIssued] = useState(0);
   const [history, setHistory] = useState<readonly HistoryEntry[]>([]);
+
+  const fontScaleIndex = useSyncExternalStore(
+    subscribeFontScale,
+    getStoredFontScaleIndex,
+    () => 1
+  );
+  const cubeScaleIndex = useSyncExternalStore(
+    subscribeCubeScale,
+    getStoredCubeScaleIndex,
+    () => 1
+  );
+
+  const handleFontScaleDown = () => {
+    setStoredFontScaleIndex(Math.max(0, fontScaleIndex - 1));
+  };
+
+  const handleFontScaleUp = () => {
+    setStoredFontScaleIndex(Math.min(FONT_SCALES.length - 1, fontScaleIndex + 1));
+  };
+
+  const handleCubeScaleDown = () => {
+    setStoredCubeScaleIndex(Math.max(0, cubeScaleIndex - 1));
+  };
+
+  const handleCubeScaleUp = () => {
+    setStoredCubeScaleIndex(Math.min(CUBE_SCALES.length - 1, cubeScaleIndex + 1));
+  };
+
+  const fontScale = FONT_SCALES[fontScaleIndex];
+  const cubeScale = CUBE_SCALES[cubeScaleIndex];
 
   const remaining = painted.filter((color) => color === null).length;
   const highlighted = new Set(issues.flatMap((issue) => issue.facelets));
@@ -761,9 +961,23 @@ export function CrossTrainer({
 
   if (!cube) {
     return (
-      <section className="flex flex-col gap-6">
-        <header className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold">내 큐브 색을 알려 주세요</h1>
+      <section
+        data-font-scale
+        style={{ "--font-scale": fontScale } as CSSProperties}
+        className="flex flex-col gap-6"
+      >
+        <header className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-xl font-semibold">내 큐브 색을 알려 주세요</h1>
+            <ScaleControls
+              fontScaleIndex={fontScaleIndex}
+              cubeScaleIndex={cubeScaleIndex}
+              onFontScaleDown={handleFontScaleDown}
+              onFontScaleUp={handleFontScaleUp}
+              onCubeScaleDown={handleCubeScaleDown}
+              onCubeScaleUp={handleCubeScaleUp}
+            />
+          </div>
           <p className="text-sm text-muted-foreground">
             지금 손에 든 큐브와 똑같이 칠하면, 완성까지 가는 길을 공식과 함께 알려 줄게요.
           </p>
@@ -807,7 +1021,7 @@ export function CrossTrainer({
 
         <div className="flex flex-wrap items-center gap-3">
           <Button onClick={start} disabled={remaining > 0}>
-            길 찾기
+            큐브 맞추기 시작
           </Button>
           <Button type="button" variant="outline" onClick={fillRandomly}>
             무작위로 채우기
@@ -856,25 +1070,45 @@ export function CrossTrainer({
         : describeFaceAction(activeAction)
     : null;
 
+  const isAllSolved =
+    alreadySolved === "yellowCornersOrient" || (stage === 7 && isStageDone);
+
   return (
-    <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-            {stage === 1
-              ? "1단계: 흰 십자가"
-              : stage === 2
-                ? "2단계: 흰 면 완성"
-                : stage === 3
-                  ? "3단계: 2층 완성"
-                  : stage === 4
-                    ? "4단계: 노란 십자가"
-                    : stage === 5
-                      ? "5단계: 노란 십자가 옆면"
-                      : stage === 6
-                        ? "6단계: 노란 꼭짓점 자리"
-                        : "7단계: 노란 꼭짓점 방향 (최종 완성)"}
-          </span>
+    <section
+      data-font-scale
+      style={{ "--font-scale": fontScale } as CSSProperties}
+      className="flex flex-col gap-6"
+    >
+      <header className="flex flex-col gap-3">
+        <StageProgress currentStage={stage} isAllSolved={isAllSolved} />
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+              {stage === 1
+                ? "1단계: 흰 십자가"
+                : stage === 2
+                  ? "2단계: 흰 면 완성"
+                  : stage === 3
+                    ? "3단계: 2층 완성"
+                    : stage === 4
+                      ? "4단계: 노란 십자가"
+                      : stage === 5
+                        ? "5단계: 노란 십자가 옆면"
+                        : stage === 6
+                          ? "6단계: 노란 꼭짓점 자리"
+                          : "7단계: 노란 꼭짓점 방향 (최종 완성)"}
+            </span>
+          </div>
+
+          <ScaleControls
+            fontScaleIndex={fontScaleIndex}
+            cubeScaleIndex={cubeScaleIndex}
+            onFontScaleDown={handleFontScaleDown}
+            onFontScaleUp={handleFontScaleUp}
+            onCubeScaleDown={handleCubeScaleDown}
+            onCubeScaleUp={handleCubeScaleUp}
+          />
         </div>
 
         <h1 className="text-xl font-semibold">
@@ -997,6 +1231,7 @@ export function CrossTrainer({
         turning={turningProp}
         onTurnEnd={finishTurn}
         indicators={activeAction?.indicators}
+        scale={cubeScale}
       />
 
       {/* 안내 영역 */}
@@ -1327,15 +1562,24 @@ export function CrossTrainer({
                 ) : null}
 
                 {activeAction.formula ? (
-                  <div className="flex flex-col items-center gap-1 rounded-md border bg-background/80 px-3 py-1.5 shadow-sm">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col items-center gap-1.5 rounded-md border bg-background/80 px-3 py-2 shadow-sm text-center">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
                       <span className="text-xs font-semibold text-primary">
                         {activeAction.formula} 공식
                       </span>
+                      {activeAction.totalRepeats && activeAction.totalRepeats > 1 ? (
+                        <span
+                          data-testid="formula-repeat-badge"
+                          className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-bold text-primary"
+                        >
+                          {activeAction.repeatIndex ?? 1} / {activeAction.totalRepeats}회차
+                        </span>
+                      ) : null}
                       <div className="flex items-center gap-1">
                         {Array.from({ length: activeAction.totalInFormula ?? 4 }, (_, i) => i + 1).map((num) => (
                           <span
                             key={num}
+                            data-testid={`formula-step-${num}`}
                             className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
                               num === activeAction.formulaIndex
                                 ? "bg-primary text-primary-foreground shadow"
@@ -1347,6 +1591,14 @@ export function CrossTrainer({
                         ))}
                       </div>
                     </div>
+                    {activeAction.formulaGoal ? (
+                      <span
+                        data-testid="formula-goal-text"
+                        className="text-xs font-semibold text-foreground"
+                      >
+                        {activeAction.formulaGoal}
+                      </span>
+                    ) : null}
                     <span className="text-[11px] text-muted-foreground">
                       {activeAction.stage === 2
                         ? "네 동작을 한 묶음으로 돌리면 아래 조각이 위로 올라오면서 회전해요"

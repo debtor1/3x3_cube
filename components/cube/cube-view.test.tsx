@@ -53,4 +53,19 @@ describe("CubeView 조각 표시", () => {
 
     expect(screen.queryAllByTestId("piece-indicator")).toHaveLength(0);
   });
+
+  it("scale prop이 전달되면 3D 씬 래퍼에 scale3d가 적용된다", () => {
+    const { container } = render(
+      <CubeView
+        cube={solvedCube()}
+        turning={null}
+        onTurnEnd={() => {}}
+        scale={1.2}
+      />
+    );
+
+    const scene = container.querySelector('[data-testid="cube-scene-scale"]');
+    expect(scene).toBeInTheDocument();
+    expect((scene as HTMLElement).style.transform).toContain("scale3d(1.2, 1.2, 1.2)");
+  });
 });

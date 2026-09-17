@@ -25,6 +25,9 @@ export type SecondLayerAction =
       readonly formula?: string;
       readonly formulaIndex?: number; // 1 ~ 10
       readonly totalInFormula?: number; // 10
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly edgeIndex?: number; // 1 ~ 4
       readonly secondLayerCase?: SecondLayerCase;
     }
@@ -39,6 +42,9 @@ export type SecondLayerAction =
       readonly formula?: string;
       readonly formulaIndex?: number;
       readonly totalInFormula?: number;
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly edgeIndex?: number;
       readonly secondLayerCase?: SecondLayerCase;
       apply(cube: Cube): Cube;
@@ -183,6 +189,9 @@ export function solveSecondLayer(initialCube: Cube): {
       formula?: string;
       formulaIndex?: number;
       totalInFormula?: number;
+      repeatIndex?: number;
+      totalRepeats?: number;
+      formulaGoal?: string;
       edgeIndex?: number;
       secondLayerCase?: SecondLayerCase;
     }
@@ -199,6 +208,9 @@ export function solveSecondLayer(initialCube: Cube): {
       formula: meta?.formula,
       formulaIndex: meta?.formulaIndex,
       totalInFormula: meta?.totalInFormula,
+      repeatIndex: meta?.repeatIndex,
+      totalRepeats: meta?.totalRepeats,
+      formulaGoal: meta?.formulaGoal,
       edgeIndex: meta?.edgeIndex,
       secondLayerCase: meta?.secondLayerCase,
     });
@@ -215,6 +227,9 @@ export function solveSecondLayer(initialCube: Cube): {
       formula?: string;
       formulaIndex?: number;
       totalInFormula?: number;
+      repeatIndex?: number;
+      totalRepeats?: number;
+      formulaGoal?: string;
       edgeIndex?: number;
       secondLayerCase?: SecondLayerCase;
     }
@@ -231,6 +246,9 @@ export function solveSecondLayer(initialCube: Cube): {
       formula: meta?.formula,
       formulaIndex: meta?.formulaIndex,
       totalInFormula: meta?.totalInFormula,
+      repeatIndex: meta?.repeatIndex,
+      totalRepeats: meta?.totalRepeats,
+      formulaGoal: meta?.formulaGoal,
       edgeIndex: meta?.edgeIndex,
       secondLayerCase: meta?.secondLayerCase,
       apply: (c: Cube) => rotateCubeY(c, clockwise),
@@ -259,11 +277,18 @@ export function solveSecondLayer(initialCube: Cube): {
           { position: [1, 0, 1] as const, label: "목표 자리", type: "target" as const },
         ];
 
+    const formulaGoal = isEject
+      ? "🎯 목표: 2층에 잘못 갇힌 조각을 윗면으로 꺼내요"
+      : "🎯 목표: 윗면의 모서리 조각을 2층 오른쪽 자리로 넣어요";
+
     // 1. 피하기: U (오른쪽으로 넣으므로 반대인 왼쪽으로 피함)
     doMove({ face: "U", clockwise: true }, {
       formula: formulaName,
       formulaIndex: 1,
       totalInFormula: 10,
+      repeatIndex: 1,
+      totalRepeats: 1,
+      formulaGoal,
       edgeIndex,
       secondLayerCase: layerCase,
       reason: "오른쪽으로 넣기 위해 윗면을 반대쪽(왼쪽)으로 피해요",
@@ -285,6 +310,9 @@ export function solveSecondLayer(initialCube: Cube): {
         formula: formulaName,
         formulaIndex: 2 + idx,
         totalInFormula: 10,
+        repeatIndex: 1,
+        totalRepeats: 1,
+        formulaGoal,
         edgeIndex,
         secondLayerCase: layerCase,
         reason: "오른손 트위스트로 조각의 짝을 맞춰요",
@@ -300,6 +328,9 @@ export function solveSecondLayer(initialCube: Cube): {
       formula: formulaName,
       formulaIndex: 6,
       totalInFormula: 10,
+      repeatIndex: 1,
+      totalRepeats: 1,
+      formulaGoal,
       edgeIndex,
       secondLayerCase: layerCase,
       reason: "왼손 트위스트로 넣기 위해 큐브를 오른쪽으로 돌려요",
@@ -321,6 +352,9 @@ export function solveSecondLayer(initialCube: Cube): {
         formula: formulaName,
         formulaIndex: 7 + idx,
         totalInFormula: 10,
+        repeatIndex: 1,
+        totalRepeats: 1,
+        formulaGoal,
         edgeIndex,
         secondLayerCase: layerCase,
         reason: "왼손 트위스트로 짝맞춘 조각을 2층 제자리에 쏙 넣어요",
@@ -343,11 +377,16 @@ export function solveSecondLayer(initialCube: Cube): {
       { position: [-1, 0, 1] as const, label: "목표 자리", type: "target" as const },
     ];
 
+    const formulaGoal = "🎯 목표: 윗면의 모서리 조각을 2층 왼쪽 자리로 넣어요";
+
     // 1. 피하기: U' (왼쪽으로 넣으므로 반대인 오른쪽으로 피함)
     doMove({ face: "U", clockwise: false }, {
       formula: formulaName,
       formulaIndex: 1,
       totalInFormula: 10,
+      repeatIndex: 1,
+      totalRepeats: 1,
+      formulaGoal,
       edgeIndex,
       secondLayerCase: layerCase,
       reason: "왼쪽으로 넣기 위해 윗면을 반대쪽(오른쪽)으로 피해요",
@@ -369,6 +408,9 @@ export function solveSecondLayer(initialCube: Cube): {
         formula: formulaName,
         formulaIndex: 2 + idx,
         totalInFormula: 10,
+        repeatIndex: 1,
+        totalRepeats: 1,
+        formulaGoal,
         edgeIndex,
         secondLayerCase: layerCase,
         reason: "왼손 트위스트로 조각의 짝을 맞춰요",
@@ -384,6 +426,9 @@ export function solveSecondLayer(initialCube: Cube): {
       formula: formulaName,
       formulaIndex: 6,
       totalInFormula: 10,
+      repeatIndex: 1,
+      totalRepeats: 1,
+      formulaGoal,
       edgeIndex,
       secondLayerCase: layerCase,
       reason: "오른손 트위스트로 넣기 위해 큐브를 왼쪽으로 돌려요",
@@ -405,6 +450,9 @@ export function solveSecondLayer(initialCube: Cube): {
         formula: formulaName,
         formulaIndex: 7 + idx,
         totalInFormula: 10,
+        repeatIndex: 1,
+        totalRepeats: 1,
+        formulaGoal,
         edgeIndex,
         secondLayerCase: layerCase,
         reason: "오른손 트위스트로 짝맞춘 조각을 2층 제자리에 쏙 넣어요",

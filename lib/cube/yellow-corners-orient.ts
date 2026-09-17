@@ -21,6 +21,9 @@ export type YellowCornersOrientAction =
       readonly formula?: string;
       readonly formulaIndex?: number; // 1 ~ 4
       readonly totalInFormula?: number; // 4
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly isDisorderedTemporary?: boolean;
       readonly isUOnlyRotation?: boolean;
       readonly isFinalAlignment?: boolean;
@@ -36,6 +39,9 @@ export type YellowCornersOrientAction =
       readonly formula?: string;
       readonly formulaIndex?: number;
       readonly totalInFormula?: number;
+      readonly repeatIndex?: number;
+      readonly totalRepeats?: number;
+      readonly formulaGoal?: string;
       readonly isDisorderedTemporary?: boolean;
       readonly isUOnlyRotation?: boolean;
       readonly isFinalAlignment?: boolean;
@@ -163,7 +169,22 @@ export function solveYellowCornersOrient(cube: Cube): {
     }
 
     // URF 꼭짓점의 노란색이 위를 볼 때까지 트위스트(4동작) 반복 (2회 또는 4회)
+    let totalTwistsForThisCorner = 0;
+    let testCornerCube = current;
+    while (!isURFYellowUp(testCornerCube) && totalTwistsForThisCorner < 6) {
+      for (const step of D_TWIST_STEPS) {
+        testCornerCube = applyMove(testCornerCube, step.move);
+      }
+      totalTwistsForThisCorner++;
+    }
+
+    let twistCount = 0;
     while (!isURFYellowUp(current)) {
+      twistCount++;
+      const repeatIndex = twistCount;
+      const totalRepeats = totalTwistsForThisCorner;
+      const formulaGoal = `🎯 목표: 오른쪽 앞 꼭짓점의 노란색이 위를 볼 때까지 반복해요 (${repeatIndex} / ${totalRepeats}회차)`;
+
       const situation = "오른쪽 앞 꼭짓점의 노란색이 위를 보지 않아요";
       const condition =
         "아랫면 트위스트를 반복해요. (아래층이 흐트러져 보이는 것은 정상이니 안심하세요!)";
@@ -195,6 +216,9 @@ export function solveYellowCornersOrient(cube: Cube): {
           formula: "아랫면 트위스트",
           formulaIndex: i + 1,
           totalInFormula: 4,
+          repeatIndex,
+          totalRepeats,
+          formulaGoal,
           isDisorderedTemporary: true,
         });
         current = applyMove(current, step.move);

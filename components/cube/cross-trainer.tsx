@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, useState, useSyncExternalStore } from "react";
+import { type CSSProperties, useEffect, useState, useSyncExternalStore } from "react";
 
 import { ColorInput } from "@/components/cube/color-input";
 import { CubeView, type Turning } from "@/components/cube/cube-view";
@@ -958,6 +958,58 @@ export function CrossTrainer({
     }
   }
 
+  const currentActions =
+    stage === 1
+      ? stage1Actions
+      : stage === 2
+        ? stage2Actions
+        : stage === 3
+          ? stage3Actions
+          : stage === 4
+            ? stage4Actions
+            : stage === 5
+              ? stage5Actions
+              : stage === 6
+                ? stage6Actions
+                : stage7Actions;
+  const isStageDone = step >= currentActions.length;
+  const isNextDisabled =
+    turn !== null ||
+    isStageDone ||
+    stage1CompletedWaiting ||
+    stage2CompletedWaiting ||
+    stage3CompletedWaiting ||
+    stage4CompletedWaiting ||
+    stage5CompletedWaiting ||
+    stage6CompletedWaiting;
+
+  useEffect(() => {
+    if (!cube || alreadySolved !== null) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === "Enter") {
+        if (!isNextDisabled) {
+          e.preventDefault();
+          handleNext();
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  });
 
   if (!cube) {
     return (
@@ -1035,21 +1087,6 @@ export function CrossTrainer({
   }
 
   // 큐브 가이드 화면
-  const currentActions =
-    stage === 1
-      ? stage1Actions
-      : stage === 2
-        ? stage2Actions
-        : stage === 3
-          ? stage3Actions
-          : stage === 4
-            ? stage4Actions
-            : stage === 5
-              ? stage5Actions
-              : stage === 6
-                ? stage6Actions
-                : stage7Actions;
-  const isStageDone = step >= currentActions.length;
   const activeAction = turn?.action ?? (step < currentActions.length ? currentActions[step] : null);
 
   // turning prop for CubeView
@@ -1663,16 +1700,9 @@ export function CrossTrainer({
         </Button>
         <Button
           onClick={handleNext}
-          disabled={
-            turn !== null ||
-            isStageDone ||
-            stage1CompletedWaiting ||
-            stage2CompletedWaiting ||
-            stage3CompletedWaiting ||
-            stage4CompletedWaiting ||
-            stage5CompletedWaiting ||
-            stage6CompletedWaiting
-          }
+          title="다음 동작 (Enter)"
+          aria-keyshortcuts="Enter"
+          disabled={isNextDisabled}
         >
           다음 동작
         </Button>

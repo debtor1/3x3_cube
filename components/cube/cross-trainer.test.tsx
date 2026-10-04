@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, test } from "vitest";
 
 import { CrossTrainer } from "@/components/cube/cross-trainer";
@@ -9,6 +9,14 @@ import { randomCube } from "@/lib/cube/scramble";
 import { rotateCubeX180, solveSecondLayer } from "@/lib/cube/second-layer";
 import { applyMove, applyMoves, solvedCube, type Move } from "@/lib/cube/state";
 import { isYellowCrossSolved } from "@/lib/cube/yellow-cross";
+
+/** 맞혀 보기 질문이 떠 있으면 아무 답이나 고르고 공식 안내로 넘어간다. */
+function answerQuizIfShown() {
+  const quiz = screen.queryByTestId("case-quiz");
+  if (!quiz) return;
+  fireEvent.click(within(quiz).getAllByRole("button")[0]);
+  fireEvent.click(screen.getByRole("button", { name: "공식 보러 가기" }));
+}
 
 function emptyCells() {
   return screen
@@ -82,6 +90,7 @@ test("5단계까지 맞고 꼭짓점 자리는 섞인 상태를 넣으면 1~5단
   fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
 
   expect(screen.getByText("6단계: 노란 꼭짓점 자리")).toBeInTheDocument();
+  answerQuizIfShown();
   expect(screen.getByText(/6단계: 노란 꼭짓점 자리 맞추기란\?/)).toBeInTheDocument();
 });
 
@@ -104,6 +113,7 @@ test("노란 십자가까지 맞고 옆면은 틀어진 상태를 넣으면 1, 2
   fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
 
   expect(screen.getByText("5단계: 노란 십자가 옆면")).toBeInTheDocument();
+  answerQuizIfShown();
   expect(screen.getByText(/5단계: 노란 십자가 옆면 맞추기란\?/)).toBeInTheDocument();
 });
 
@@ -135,6 +145,7 @@ test("2층까지 완성된 상태를 넣으면 1, 2, 3단계를 건너뛰고 바
   fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
 
   expect(screen.getByText("4단계: 노란 십자가")).toBeInTheDocument();
+  answerQuizIfShown();
   expect(screen.getByText(/4단계: 노란 십자가 맞추기란\?/)).toBeInTheDocument();
 });
 
@@ -174,7 +185,7 @@ test("수용 기준 2: 흰 십자가가 이미 맞은 상태를 넣으면 1단�
   // 1단계 표시가 없고 바로 2단계 배지 표시
   expect(screen.getByText("2단계: 흰 면 완성")).toBeInTheDocument();
   // 공식 묶음과 트위스트 안내 노출
-  expect(screen.getByText(/트위스트/)).toBeInTheDocument();
+  expect(screen.getAllByText(/트위스트/).length).toBeGreaterThanOrEqual(1);
 });
 
 test("수용 기준 6 & 10: 공식은 네 동작 묶음으로 보이고 영어 기호가 없다", () => {
@@ -357,6 +368,7 @@ test("4단계에서 6동작 공식 묶음과 상황 설명이 노출된다", asy
   fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
 
   expect(screen.getByText("4단계: 노란 십자가")).toBeInTheDocument();
+  answerQuizIfShown();
   expect(screen.getByText(/4단계: 노란 십자가 맞추기란\?/)).toBeInTheDocument();
   expect(screen.getByText("지금 상황")).toBeInTheDocument();
   expect(screen.getByText("공식 조건")).toBeInTheDocument();
@@ -438,6 +450,7 @@ test("5단계: 노란 십자가 옆면 안내와 8동작 공식 묶음이 화면
   }
 
   expect(screen.getByText("5단계: 노란 십자가 옆면")).toBeInTheDocument();
+  answerQuizIfShown();
   expect(screen.getByText(/5단계: 노란 십자가 옆면 맞추기란\?/)).toBeInTheDocument();
 });
 
@@ -450,6 +463,7 @@ test("6단계: 노란 꼭짓점 자리 안내와 8동작 대칭 공식 묶음이
   while (screen.getByTestId("stage-step-6").getAttribute("data-status") !== "current" && !skipButton.hasAttribute("disabled")) {
     fireEvent.click(skipButton);
   }
+  answerQuizIfShown();
 
   expect(screen.getByText(/6단계: 노란 꼭짓점 자리 맞추기란\?/)).toBeInTheDocument();
 });
@@ -463,6 +477,7 @@ test("7단계: 노란 꼭짓점 방향 맞추기 안내와 4동작 아랫면 트
   while (screen.getByTestId("stage-step-7").getAttribute("data-status") !== "current" && !skipButton.hasAttribute("disabled")) {
     fireEvent.click(skipButton);
   }
+  answerQuizIfShown();
 
   expect(screen.getByText("7단계: 노란 꼭짓점 방향 (최종 완성)")).toBeInTheDocument();
   expect(screen.getByText(/7단계: 노란 꼭짓점 방향 맞추기 \(최종 완성!\)/)).toBeInTheDocument();
@@ -636,6 +651,7 @@ describe("공식 반복 횟수 및 목표 상태 안내 (formula-repeat-guidance
     // 1~3단계는 이미 맞았으므로 곧바로 4단계 시작
     expect(screen.getByTestId("stage-step-4")).toHaveAttribute("data-status", "current");
     expect(screen.getAllByText(/4단계: 노란 십자가/)[0]).toBeInTheDocument();
+    answerQuizIfShown();
 
     // 목표 문구는 상시 표시됨
     const goalEl = screen.getByTestId("formula-goal-text");
@@ -671,6 +687,10 @@ describe("공식 반복 횟수 및 목표 상태 안내 (formula-repeat-guidance
 
     // 공식 카드가 나타날 때까지 다음 동작 및 애니메이션 진행
     while (!screen.queryByTestId("formula-goal-text")) {
+      if (screen.queryByTestId("case-quiz")) {
+        answerQuizIfShown();
+        continue;
+      }
       fireEvent.click(screen.getByRole("button", { name: "다음 동작" }));
       fireEvent.click(screen.getByTestId("turn-layer"));
     }
@@ -703,6 +723,7 @@ describe("공식 반복 횟수 및 목표 상태 안내 (formula-repeat-guidance
     // 1~6단계는 이미 맞았으므로 곧바로 7단계 시작
     expect(screen.getByTestId("stage-step-7")).toHaveAttribute("data-status", "current");
     expect(screen.getAllByText(/7단계: 노란 꼭짓점 방향/)[0]).toBeInTheDocument();
+    answerQuizIfShown();
 
     // 트위스트 반복 회차 배지 노출
     const badgeEl = screen.getByTestId("formula-repeat-badge");
@@ -789,3 +810,85 @@ describe("데스크톱(PC) 가로 2열 분할 레이아웃 (desktop-horizontal-l
 
 
 
+
+describe("원리와 공식을 익히는 학습 가이드 (learning-guide)", () => {
+  function startAtStage4() {
+    // 2층까지 완성되고 윗면이 ㄱ자인 결정론적 큐브
+    let c = rotateCubeX180(solvedCube());
+    c = applyMoves(c, [
+      { face: "F", clockwise: true },
+      { face: "R", clockwise: true },
+      { face: "U", clockwise: true },
+      { face: "R", clockwise: false },
+      { face: "U", clockwise: false },
+      { face: "F", clockwise: false },
+    ]);
+    render(<CrossTrainer initialPainted={c} />);
+    fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
+  }
+
+  it("수용 기준 1 & 4 & 7: 4단계 시작 시 모양 질문이 먼저 나오고, 공식 카드와 다음 동작은 막혀 있다", () => {
+    startAtStage4();
+
+    const quiz = screen.getByTestId("case-quiz");
+    expect(within(quiz).getByText("지금 윗면의 노란 모양은 무엇일까요?")).toBeInTheDocument();
+    for (const label of ["점", "ㄱ자", "일자"]) {
+      expect(within(quiz).getByRole("button", { name: label })).toBeInTheDocument();
+    }
+    expect(screen.getByTestId("stage-principle")).toBeInTheDocument();
+    expect(screen.queryByTestId("formula-goal-text")).not.toBeInTheDocument();
+    expect(screen.queryByText(/ㄱ자 모양/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "다음 동작" })).toBeDisabled();
+
+    fireEvent.keyDown(window, { key: "Enter" });
+    expect(screen.queryByTestId("turn-layer")).not.toBeInTheDocument();
+  });
+
+  it("수용 기준 2: 정답을 고르면 맞았다고 알려 주고, 공식 보러 가기로 원래 안내로 돌아간다", () => {
+    startAtStage4();
+
+    fireEvent.click(screen.getByRole("button", { name: "ㄱ자" }));
+    expect(screen.getByTestId("case-quiz-feedback").textContent).toMatch(/맞았어요/);
+
+    fireEvent.click(screen.getByRole("button", { name: "공식 보러 가기" }));
+    expect(screen.queryByTestId("case-quiz")).not.toBeInTheDocument();
+    expect(screen.getByTestId("formula-goal-text")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "다음 동작" })).not.toBeDisabled();
+  });
+
+  it("수용 기준 3: 틀린 답을 골라도 정답을 알려 주고 그대로 진행한다", () => {
+    startAtStage4();
+
+    fireEvent.click(screen.getByRole("button", { name: "점" }));
+    const feedback = screen.getByTestId("case-quiz-feedback");
+    expect(feedback.textContent).toMatch(/괜찮아요/);
+    expect(feedback.textContent).toMatch(/정답: ㄱ자/);
+
+    fireEvent.click(screen.getByRole("button", { name: "공식 보러 가기" }));
+    expect(screen.getByRole("button", { name: "다음 동작" })).not.toBeDisabled();
+  });
+
+  it("수용 기준 8: 단계를 마치면 그 단계 공식 카드가 보인다", async () => {
+    const oneMoveFromCross = applyMoves(solvedCube(), [{ face: "F", clockwise: false }]);
+    render(<CrossTrainer initialPainted={oneMoveFromCross} />);
+    fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
+    expect(screen.getByTestId("stage-principle")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "다음 동작" }));
+    fireEvent.click(await screen.findByTestId("turn-layer"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stage-recap")).toBeInTheDocument();
+    });
+  });
+
+  it("수용 기준 8: 7단계까지 마치면 공식 수첩이 보인다", () => {
+    render(<CrossTrainer initialPainted={randomCube()} />);
+    fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
+    const skipButton = screen.getByRole("button", { name: "다음 단계로 건너뛰기" });
+    while (!skipButton.hasAttribute("disabled")) fireEvent.click(skipButton);
+
+    const notebook = screen.getByTestId("formula-notebook");
+    expect(within(notebook).getByText("노란 꼭짓점 공식")).toBeInTheDocument();
+  });
+});

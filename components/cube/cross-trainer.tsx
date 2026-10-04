@@ -4,6 +4,12 @@ import { type CSSProperties, useEffect, useState, useSyncExternalStore } from "r
 
 import { AuthButton } from "@/components/auth-button";
 import { ColorInput } from "@/components/cube/color-input";
+import {
+  CaseQuizCard,
+  FormulaNotebook,
+  PrincipleNote,
+  StageRecap,
+} from "@/components/cube/lesson-cards";
 import { CubeView, type Turning } from "@/components/cube/cube-view";
 import { PhotoInputDialog } from "@/components/cube/photo-input-dialog";
 import { StageProgress } from "@/components/cube/stage-progress";
@@ -18,6 +24,7 @@ import {
   type PieceIndicator,
 } from "@/lib/cube/face";
 import { describeFaceAction, describeMove } from "@/lib/cube/guide";
+import { findCaseQuiz } from "@/lib/cube/lesson";
 import { canPaint } from "@/lib/cube/paint";
 import { randomCube } from "@/lib/cube/scramble";
 import {
@@ -358,6 +365,8 @@ export function CrossTrainer({
   const [turn, setTurn] = useState<TurnState | null>(null);
   const [issued, setIssued] = useState(0);
   const [history, setHistory] = useState<readonly HistoryEntry[]>([]);
+  // 이미 답한 맞혀 보기 질문(`단계:동작 번호`). 이전 동작으로 돌아갔다 와도 다시 묻지 않는다.
+  const [answeredQuizzes, setAnsweredQuizzes] = useState<ReadonlySet<string>>(new Set());
 
   const fontScaleIndex = useSyncExternalStore(
     subscribeFontScale,
@@ -405,6 +414,7 @@ export function CrossTrainer({
     setIssues([]);
     setCube(facelets);
     setHistory([]);
+    setAnsweredQuizzes(new Set());
     setStep(0);
 
     // 0. 이미 7단계(큐브 6면 전체 완성)까지 다 맞았는지 확인
@@ -658,6 +668,7 @@ export function CrossTrainer({
     setIssued(0);
     setIssues([]);
     setHistory([]);
+    setAnsweredQuizzes(new Set());
     setStage1CompletedWaiting(false);
     setStage2CompletedWaiting(false);
     setStage3CompletedWaiting(false);
@@ -976,8 +987,14 @@ export function CrossTrainer({
                 ? stage6Actions
                 : stage7Actions;
   const isStageDone = step >= currentActions.length;
+  const quizKey = `${stage}:${step}`;
+  const pendingQuiz =
+    turn === null && !answeredQuizzes.has(quizKey)
+      ? findCaseQuiz(currentActions, step)
+      : null;
   const isNextDisabled =
     turn !== null ||
+    pendingQuiz !== null ||
     isStageDone ||
     stage1CompletedWaiting ||
     stage2CompletedWaiting ||
@@ -1254,7 +1271,9 @@ export function CrossTrainer({
                                               ? "1층과 2층의 옆면 색이 각 면 중앙과 모두 일치해요."
                                               : stage === 2 && isStageDone
                                                 ? "윗면 아홉 칸이 모두 흰색이고, 옆면 윗줄 세 칸이 각 면 중앙과 같은 색이에요."
-                                                : stage === 1
+                                                : pendingQuiz
+                                                  ? "공식을 보기 전에 먼저 맞혀 봐요"
+                                                  : stage === 1
                                                   ? `모두 ${stage1Actions.length}번 중 ${step + 1}번째`
                                                   : stage === 2
                                                     ? activeAction?.cornerIndex
@@ -1323,6 +1342,7 @@ export function CrossTrainer({
             <p className="text-xs text-muted-foreground max-w-sm">
               이제 십자가 사이의 빈 꼭짓점 4개를 채울 차례예요. 꼭짓점 조각의 옆면 색까지 함께 맞춰 흰 면과 1층을 완성해요.
             </p>
+            <StageRecap stage={1} />
             <Button size="lg" onClick={proceedToStage2}>
               2단계: 흰 면 맞추러 가기
             </Button>
@@ -1333,6 +1353,7 @@ export function CrossTrainer({
             <p className="text-xs text-muted-foreground max-w-sm">
               이제 큐브를 180도 뒤집어 흰 면을 바닥에 두고, 2층 모서리 4개를 맞출 차례예요.
             </p>
+            <StageRecap stage={2} />
             <Button size="lg" onClick={proceedToStage3}>
               3단계: 2층 맞추러 가기
             </Button>
@@ -1343,6 +1364,7 @@ export function CrossTrainer({
             <p className="text-xs text-muted-foreground max-w-sm">
               이제 윗면(노란 면)을 올려다보며 노란색 십자가(➕)를 만들 차례예요. 2단계의 오른손 트위스트를 활용한 6동작 공식으로 쉽게 완성할 수 있어요.
             </p>
+            <StageRecap stage={3} />
             <Button size="lg" onClick={proceedToStage4}>
               4단계: 노란 십자가 맞추러 가기
             </Button>
@@ -1353,6 +1375,7 @@ export function CrossTrainer({
             <p className="text-xs text-muted-foreground max-w-sm">
               이제 노란 십자가 4개 모서리의 옆면 색을 각 면의 중심 색과 맞출 차례예요. &quot;올리고 돌리고 내리고 돌리고, 올리고 두 번 내리고&quot; 공식으로 쉽게 완성할 수 있어요.
             </p>
+            <StageRecap stage={4} />
             <Button size="lg" onClick={proceedToStage5}>
               5단계: 노란 십자가 옆면 맞추러 가기
             </Button>
@@ -1363,6 +1386,7 @@ export function CrossTrainer({
             <p className="text-xs text-muted-foreground max-w-sm">
               이제 윗면 4개 꼭짓점을 각자의 제자리로 보낼 차례예요. &quot;돌리고 올리고 돌리고 올리고, 돌리고 내리고 돌리고 내리고&quot; 대칭 공식으로 쉽게 맞출 수 있어요.
             </p>
+            <StageRecap stage={5} />
             <Button size="lg" onClick={proceedToStage6}>
               6단계: 노란 꼭짓점 자리 맞추러 가기
             </Button>
@@ -1373,6 +1397,7 @@ export function CrossTrainer({
             <p className="text-xs text-muted-foreground max-w-sm">
               이제 2단계에서 배운 4동작 아랫면 트위스트(&quot;내리고 돌리고 올리고 돌리고&quot;)를 사용해 꼭짓점의 노란색을 위로 돌려 맞추고, 큐브 전체를 완성할 차례예요.
             </p>
+            <StageRecap stage={6} />
             <Button size="lg" onClick={proceedToStage7}>
               7단계: 노란 꼭짓점 방향 맞추러 가기
             </Button>
@@ -1383,6 +1408,7 @@ export function CrossTrainer({
             <p className="text-sm text-muted-foreground max-w-sm">
               여섯 면의 모든 색이 완벽하게 맞춰졌습니다! 큐브를 자유롭게 돌려보며 완성된 모습을 감상해보세요.
             </p>
+            <FormulaNotebook />
             <Button size="lg" onClick={restart}>
               다른 큐브 맞춰보기
             </Button>
@@ -1437,8 +1463,20 @@ export function CrossTrainer({
               3단계: 2층 맞추러 가기
             </Button>
           </div>
+        ) : guide && pendingQuiz && activeAction ? (
+          <div className="flex w-full flex-col items-center gap-2">
+            <PrincipleNote stage={activeAction.stage} />
+            <CaseQuizCard
+              key={quizKey}
+              quiz={pendingQuiz}
+              onDone={() =>
+                setAnsweredQuizzes((prev) => new Set(prev).add(quizKey))
+              }
+            />
+          </div>
         ) : guide ? (
           <>
+            {activeAction ? <PrincipleNote stage={activeAction.stage} /> : null}
             {/* 2단계 / 3단계 / 4단계 / 5단계 / 6단계 / 7단계 설명 카드 및 공식 묶음 표시 */}
             {activeAction && (activeAction.stage === 2 || activeAction.stage === 3 || activeAction.stage === 4 || activeAction.stage === 5 || activeAction.stage === 6 || activeAction.stage === 7) ? (
               <div className="flex flex-col items-center gap-2 mb-2 w-full max-w-md">

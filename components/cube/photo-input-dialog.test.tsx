@@ -10,7 +10,7 @@ vi.mock("@/lib/use-safe-session", () => ({
 import { useSafeSession } from "@/lib/use-safe-session";
 
 describe("PhotoInputDialog", () => {
-  it("비로그인 상태일 때 로그인 안내와 구글 로그인 버튼을 보여준다", () => {
+  it("비로그인 상태여도 6면 촬영은 쓸 수 있고, 대각선 2장 촬영에서만 로그인을 안내한다", () => {
     vi.mocked(useSafeSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
@@ -25,13 +25,19 @@ describe("PhotoInputDialog", () => {
       />
     );
 
+    expect(
+      screen.getByText("6면 정면 촬영 가이드 (가장 정확한 인식)")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("구글 로그인이 필요해요")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/대각선 2장 촬영/));
     expect(screen.getByText("구글 로그인이 필요해요")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "구글 계정으로 로그인" })
     ).toBeInTheDocument();
   });
 
-  it("허용되지 않은 다른 구글 계정으로 로그인된 경우 권한 경고를 표시한다", () => {
+  it("허용되지 않은 다른 구글 계정이면 대각선 2장 촬영에서 권한 경고를 표시한다", () => {
     vi.mocked(useSafeSession).mockReturnValue({
       data: { user: { email: "other@gmail.com" } } as unknown as Session,
       status: "authenticated",
@@ -46,6 +52,7 @@ describe("PhotoInputDialog", () => {
       />
     );
 
+    fireEvent.click(screen.getByText(/대각선 2장 촬영/));
     expect(screen.getByText("이용 권한이 없습니다")).toBeInTheDocument();
     expect(
       screen.getByText(/debtor11@gmail\.com/)
@@ -86,7 +93,7 @@ describe("PhotoInputDialog", () => {
     expect(screen.getAllByText("상단: 흰색(위)")).toHaveLength(4);
 
     const analyzeBtn = screen.getByRole("button", {
-      name: "AI로 색상 분석하기",
+      name: "색상 분석하기",
     });
     expect(analyzeBtn).toBeInTheDocument();
     expect(analyzeBtn).toBeDisabled();

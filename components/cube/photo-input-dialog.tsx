@@ -18,6 +18,7 @@ import { FaceGridPicker } from "@/components/cube/face-grid-picker";
 import { classifyFaceSamples, type FaceSamples } from "@/lib/cube/color-detect";
 import {
   DEFAULT_GRID_REGION,
+  detectGridRegionFromImage,
   type GridRegion,
   sampleGridFromImage,
 } from "@/lib/cube/color-sample";
@@ -143,8 +144,9 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
     try {
       setError(null);
       const compressedUrl = await compressImage(file);
+      const region = await detectGridRegionFromImage(compressedUrl);
       setFaceImages((prev) => ({ ...prev, [face]: compressedUrl }));
-      setFaceRegions((prev) => ({ ...prev, [face]: DEFAULT_GRID_REGION }));
+      setFaceRegions((prev) => ({ ...prev, [face]: region }));
     } catch {
       setError("이미지를 불러오는 중 문제가 발생했습니다.");
     } finally {
@@ -157,8 +159,9 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
     if (!current) return;
     try {
       const rotated = await rotateImage90(current);
+      const region = await detectGridRegionFromImage(rotated);
       setFaceImages((prev) => ({ ...prev, [face]: rotated }));
-      setFaceRegions((prev) => ({ ...prev, [face]: DEFAULT_GRID_REGION }));
+      setFaceRegions((prev) => ({ ...prev, [face]: region }));
     } catch {
       setError("사진 회전 중 오류가 발생했습니다.");
     }
@@ -369,7 +372,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                     <span>6면 정면 촬영 가이드 (가장 정확한 인식)</span>
                   </div>
                   <p className="mt-1 text-emerald-900/90 dark:text-emerald-300 leading-relaxed">
-                    각 면의 <strong>가운데 중심색</strong>을 확인하고 정면으로 반듯하게 찍은 뒤, 사진 위 <strong>흰 격자를 끌어서 큐브 9칸에 맞춰주세요</strong>. 중심 칸 색을 기준으로 판단하므로 연두빛 노랑처럼 색감이 다른 큐브도 맞게 인식됩니다.
+                    각 면의 <strong>가운데 중심색</strong>을 확인하고 정면으로 반듯하게 찍은 뒤, 사진 위 <strong>흰 격자가 큐브 9칸에 맞는지 확인</strong>하고, 어긋나면 끌어서 맞춰주세요. 중심 칸 색을 기준으로 판단하므로 연두빛 노랑처럼 색감이 다른 큐브도 맞게 인식됩니다.
                   </p>
                 </div>
 

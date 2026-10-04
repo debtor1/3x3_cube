@@ -14,7 +14,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FaceGridPicker } from "@/components/cube/face-grid-picker";
+import { classifyFaceSamples, type FaceSamples } from "@/lib/cube/color-detect";
+import {
+  DEFAULT_GRID_REGION,
+  type GridRegion,
+  sampleGridFromImage,
+} from "@/lib/cube/color-sample";
 import { compressImage, rotateImage90 } from "@/lib/cube/image-compress";
+import { assembleCubeFromFaces } from "@/lib/cube/recognize";
 import { FACES, type Color, type Face } from "@/lib/cube/state";
 
 type Props = {
@@ -87,6 +95,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
   const { data: session, status } = useSafeSession();
   const [mode, setMode] = useState<Mode>("six");
   const [faceImages, setFaceImages] = useState<Partial<Record<Face, string>>>({});
+  const [faceRegions, setFaceRegions] = useState<Partial<Record<Face, GridRegion>>>({});
   const [image1, setImage1] = useState<string | null>(null);
   const [image2, setImage2] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -135,6 +144,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
       setError(null);
       const compressedUrl = await compressImage(file);
       setFaceImages((prev) => ({ ...prev, [face]: compressedUrl }));
+      setFaceRegions((prev) => ({ ...prev, [face]: DEFAULT_GRID_REGION }));
     } catch {
       setError("이미지를 불러오는 중 문제가 발생했습니다.");
     } finally {
@@ -148,6 +158,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
     try {
       const rotated = await rotateImage90(current);
       setFaceImages((prev) => ({ ...prev, [face]: rotated }));
+      setFaceRegions((prev) => ({ ...prev, [face]: DEFAULT_GRID_REGION }));
     } catch {
       setError("사진 회전 중 오류가 발생했습니다.");
     }
@@ -185,11 +196,29 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
     setLoading(true);
     setError(null);
 
+    if (mode === "six") {
+      try {
+        const entries = await Promise.all(
+          FACES.map(async (face) => [
+            face,
+            await sampleGridFromImage(
+              faceImages[face] as string,
+              faceRegions[face] ?? DEFAULT_GRID_REGION
+            ),
+          ])
+        );
+        const faces = classifyFaceSamples(Object.fromEntries(entries) as FaceSamples);
+        onRecognized(assembleCubeFromFaces(faces));
+        handleClose();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "사진 분석에 실패했습니다.");
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
-      const payload =
-        mode === "six"
-          ? { faces: faceImages }
-          : { image1, image2 };
+      const payload = { image1, image2 };
 
       const response = await fetch("/api/cube/recognize", {
         method: "POST",
@@ -231,6 +260,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
 
   const handleClose = () => {
     setFaceImages({});
+    setFaceRegions({});
     setImage1(null);
     setImage2(null);
     setError(null);
@@ -240,17 +270,8 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
 
   const isAuthorized = session?.user?.email === ALLOWED_ADMIN_EMAIL;
 
-  return (
-    <Dialog open={open} onOpenChange={(val) => (!val ? handleClose() : onOpenChange(val))}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>큐브 사진으로 색상 자동 입력</DialogTitle>
-          <DialogDescription>
-            큐브 사진을 등록하여 6개 면 54개 칸의 색상을 자동으로 채워요.
-          </DialogDescription>
-        </DialogHeader>
-
-        {status === "loading" ? (
+  // 사진 6장은 브라우저에서 직접 분석하므로 로그인이 필요 없고, 대각선 2장만 외부 AI를 쓴다.
+  const diagonalGate = status === "loading" ? (
           <div className="flex h-36 items-center justify-center text-sm text-muted-foreground">
             로그인 상태 확인 중...
           </div>
@@ -277,7 +298,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
             <Alert variant="destructive">
               <AlertTitle>이용 권한이 없습니다</AlertTitle>
               <AlertDescription>
-                현재 사진 자동 입력 기능은 지정된 관리자(
+                대각선 2장 촬영은 지정된 관리자(
                 <span className="font-mono font-medium">{ALLOWED_ADMIN_EMAIL}</span>) 계정으로만
                 이용할 수 있습니다.
                 <br />
@@ -293,8 +314,19 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
               </Button>
             </div>
           </div>
-        ) : (
-          <div className="flex flex-col gap-5 py-2">
+        ) : null;
+
+  return (
+    <Dialog open={open} onOpenChange={(val) => (!val ? handleClose() : onOpenChange(val))}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>큐브 사진으로 색상 자동 입력</DialogTitle>
+          <DialogDescription>
+            큐브 사진을 등록하여 6개 면 54개 칸의 색상을 자동으로 채워요.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-5 py-2">
             {error ? (
               <Alert variant="destructive">
                 <AlertTitle>알림</AlertTitle>
@@ -337,7 +369,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                     <span>6면 정면 촬영 가이드 (가장 정확한 인식)</span>
                   </div>
                   <p className="mt-1 text-emerald-900/90 dark:text-emerald-300 leading-relaxed">
-                    각 면의 <strong>가운데 중심색</strong>을 확인하고, 3×3 격자가 정면으로 보이게 반듯하게 촬영해주세요. 왜곡이 없어 인식률이 가장 높습니다.
+                    각 면의 <strong>가운데 중심색</strong>을 확인하고 정면으로 반듯하게 찍은 뒤, 사진 위 <strong>흰 격자를 끌어서 큐브 9칸에 맞춰주세요</strong>. 중심 칸 색을 기준으로 판단하므로 연두빛 노랑처럼 색감이 다른 큐브도 맞게 인식됩니다.
                   </p>
                 </div>
 
@@ -379,11 +411,13 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
 
                         {img ? (
                           <div className="relative mt-1 flex flex-col items-center gap-2">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                            <FaceGridPicker
                               src={img}
                               alt={`${cfg.label} 미리보기`}
-                              className="max-h-32 w-full rounded border object-contain bg-black/5"
+                              region={faceRegions[cfg.face] ?? DEFAULT_GRID_REGION}
+                              onChange={(region) =>
+                                setFaceRegions((prev) => ({ ...prev, [cfg.face]: region }))
+                              }
                             />
                             <div className="flex flex-wrap justify-center gap-1.5">
                               <Button
@@ -440,7 +474,7 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                   })}
                 </div>
               </div>
-            ) : (
+            ) : diagonalGate ?? (
               /* 대각선 2장 촬영 모드 */
               <div className="flex flex-col gap-5">
                 <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-xs dark:border-blue-900/50 dark:bg-blue-950/40">
@@ -652,11 +686,14 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
                 onClick={handleAnalyze}
                 disabled={!isReadyToAnalyze || loading}
               >
-                {loading ? "AI가 색상을 분석 중입니다..." : "AI로 색상 분석하기"}
+                {loading
+                  ? "색상을 분석 중입니다..."
+                  : mode === "six"
+                    ? "색상 분석하기"
+                    : "AI로 색상 분석하기"}
               </Button>
             </DialogFooter>
           </div>
-        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyFaceSamples, type FaceSamples, type Rgb } from "./color-detect";
+import { classifyFaceSamples, colorDistancesOf, type FaceSamples, type Rgb } from "./color-detect";
 import { randomCube } from "./scramble";
 import { FACES, faceletsOf, type Color, type Face } from "./state";
 
@@ -75,5 +75,24 @@ describe("classifyFaceSamples", () => {
     );
 
     expect(counts).toEqual([9, 9, 9, 9, 9, 9]);
+  });
+});
+
+describe("colorDistancesOf", () => {
+  it("54칸 각각에 대해 여섯 색까지의 거리를 주고, 칸의 실제 색이 가장 가깝다", () => {
+    const random = seeded(7);
+    const cube = randomCube(random);
+    const facelets = Object.fromEntries(
+      FACES.map((face) => [face, faceletsOf(cube, face)])
+    ) as Record<Face, Color[]>;
+
+    const distances = colorDistancesOf(photograph(facelets, LIME_YELLOW_CUBE, random));
+
+    expect(distances).toHaveLength(54);
+    distances.forEach((row, index) => {
+      expect(row).toHaveLength(6);
+      const nearest = FACES[row.indexOf(Math.min(...row))];
+      expect(nearest).toBe(cube[index]);
+    });
   });
 });

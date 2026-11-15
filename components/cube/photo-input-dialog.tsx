@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FaceGridPicker } from "@/components/cube/face-grid-picker";
-import { classifyFaceSamples, type FaceSamples } from "@/lib/cube/color-detect";
+import { classifyFaceSamples, colorDistancesOf, type FaceSamples } from "@/lib/cube/color-detect";
 import {
   DEFAULT_GRID_REGION,
   detectGridRegionFromImage,
@@ -29,7 +29,11 @@ import { FACES, type Color, type Face } from "@/lib/cube/state";
 type Props = {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
-  readonly onRecognized: (painted: readonly (Color | null)[]) => void;
+  /** colorDistances는 6면 사진 모드에서만 넘어온다. 칸마다 여섯 색까지의 색 거리다. */
+  readonly onRecognized: (
+    painted: readonly (Color | null)[],
+    colorDistances?: readonly (readonly number[])[]
+  ) => void;
 };
 
 type Mode = "six" | "diagonal";
@@ -210,8 +214,9 @@ export function PhotoInputDialog({ open, onOpenChange, onRecognized }: Props) {
             ),
           ])
         );
-        const faces = classifyFaceSamples(Object.fromEntries(entries) as FaceSamples);
-        onRecognized(assembleCubeFromFaces(faces));
+        const samples = Object.fromEntries(entries) as FaceSamples;
+        const faces = classifyFaceSamples(samples);
+        onRecognized(assembleCubeFromFaces(faces), colorDistancesOf(samples));
         handleClose();
       } catch (err) {
         setError(err instanceof Error ? err.message : "사진 분석에 실패했습니다.");

@@ -12,6 +12,8 @@ import {
 } from "@/components/cube/lesson-cards";
 import { CubeView, type Turning } from "@/components/cube/cube-view";
 import { PhotoInputDialog } from "@/components/cube/photo-input-dialog";
+import { RepairSuggestion } from "@/components/cube/repair-suggestion";
+import { type ColorDistances, type Repair, applyRepair, suggestRepairs } from "@/lib/cube/repair";
 import { StageProgress } from "@/components/cube/stage-progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -333,6 +335,11 @@ export function CrossTrainer({
   const [selected, setSelected] = useState<Color>("U");
   const [issues, setIssues] = useState<readonly CubeIssue[]>([]);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  // 6면 사진으로 입력했을 때 칸마다 여섯 색까지의 색 거리. 고칠 칸을 고를 때 쓴다.
+  const [colorDistances, setColorDistances] = useState<ColorDistances | null>(null);
+  const [repairs, setRepairs] = useState<readonly Repair[]>([]);
+  const [repairIndex, setRepairIndex] = useState(0);
+  const [repairedNotice, setRepairedNotice] = useState(false);
 
   const [cube, setCube] = useState<Cube | null>(null);
   const [stage, setStage] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
@@ -399,19 +406,58 @@ export function CrossTrainer({
   const cubeScale = CUBE_SCALES[cubeScaleIndex];
 
   const remaining = painted.filter((color) => color === null).length;
-  const highlighted = new Set(issues.flatMap((issue) => issue.facelets));
+  const shownRepair = issues.length > 0 ? repairs[repairIndex] : undefined;
+  const highlighted = new Set(
+    shownRepair
+      ? shownRepair.changes.map((change) => change.index)
+      : issues.flatMap((issue) => issue.facelets)
+  );
+
+  function clearIssues() {
+    setIssues([]);
+    setRepairs([]);
+    setRepairIndex(0);
+    setRepairedNotice(false);
+  }
+
+  /** 다 칠한 입력이 실제 큐브인지 보고, 아니면 문제와 함께 가장 적게 고치는 방법을 띄운다. */
+  function checkPainted(
+    current: readonly (Color | null)[],
+    distances: ColorDistances | null
+  ): boolean {
+    const facelets = current.filter((color): color is Color => color !== null);
+    if (facelets.length !== 54) {
+      clearIssues();
+      return false;
+    }
+
+    const result = validateCube(facelets);
+    if (result.valid) {
+      clearIssues();
+      return true;
+    }
+
+    setIssues(result.issues);
+    setRepairs(suggestRepairs(facelets, distances ?? undefined));
+    setRepairIndex(0);
+    setRepairedNotice(false);
+    return false;
+  }
+
+  function applySuggestedRepair(repair: Repair) {
+    const facelets = painted.filter((color): color is Color => color !== null);
+    setPainted(applyRepair(facelets, repair));
+    clearIssues();
+    setRepairedNotice(true);
+  }
 
   function start() {
     const facelets = painted.filter((color): color is Color => color !== null);
     if (facelets.length !== 54) return;
 
-    const result = validateCube(facelets);
-    if (!result.valid) {
-      setIssues(result.issues);
-      return;
-    }
+    if (!checkPainted(painted, colorDistances)) return;
 
-    setIssues([]);
+    clearIssues();
     setCube(facelets);
     setHistory([]);
     setAnsweredQuizzes(new Set());
@@ -650,7 +696,8 @@ export function CrossTrainer({
 
   function fillRandomly() {
     setPainted([...randomCube()]);
-    setIssues([]);
+    setColorDistances(null);
+    clearIssues();
   }
 
   function restart() {
@@ -677,6 +724,8 @@ export function CrossTrainer({
     setStage6CompletedWaiting(false);
     setAlreadySolved(null);
     setPainted(blankPaint());
+    setColorDistances(null);
+    clearIssues();
   }
 
 
@@ -1076,7 +1125,7 @@ export function CrossTrainer({
               next[index] = selected;
               return next;
             });
-            setIssues([]);
+            clearIssues();
           }}
           highlighted={highlighted}
         />
@@ -1090,8 +1139,18 @@ export function CrossTrainer({
                   <li key={position}>{issue.message}</li>
                 ))}
               </ul>
+              <RepairSuggestion
+                repairs={repairs}
+                index={repairIndex}
+                onApply={applySuggestedRepair}
+                onNext={() => setRepairIndex((current) => (current + 1) % repairs.length)}
+              />
             </AlertDescription>
           </Alert>
+        ) : repairedNotice ? (
+          <p className="text-sm font-medium text-primary" role="status">
+            ✅ 제안대로 고쳤어요. 이제 실제로 만들 수 있는 큐브예요. &apos;큐브 맞추기 시작&apos;을 눌러 주세요.
+          </p>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
@@ -1116,9 +1175,11 @@ export function CrossTrainer({
         <PhotoInputDialog
           open={photoDialogOpen}
           onOpenChange={setPhotoDialogOpen}
-          onRecognized={(newPainted) => {
+          onRecognized={(newPainted, distances) => {
             setPainted([...newPainted]);
-            setIssues([]);
+            setColorDistances(distances ?? null);
+            // 사진으로 다 채웠으면 바로 검사해서, 잘못 읽은 칸이 있으면 고칠 방법부터 보여 준다.
+            checkPainted(newPainted, distances ?? null);
           }}
         />
       </section>

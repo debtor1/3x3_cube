@@ -1321,9 +1321,10 @@ export function CrossTrainer({
         className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start"
         data-testid="guide-layout-container"
       >
-        {/* 좌측 열: 3D 큐브 뷰 */}
+        {/* 좌측 열: 3D 큐브 뷰. 키가 충분한 모바일 화면에서는 설명이 길어져도 큐브가 보이도록 화면 위에 붙여 둔다.
+            가로로 눕힌 휴대폰처럼 키가 낮으면 큐브가 화면을 다 덮으므로 붙이지 않는다. */}
         <div
-          className="flex flex-col items-center justify-center lg:col-span-5 xl:col-span-5 lg:sticky lg:top-8"
+          className="flex flex-col items-center justify-center tall-mobile:sticky tall-mobile:top-0 tall-mobile:z-10 tall-mobile:bg-background lg:col-span-5 xl:col-span-5 lg:sticky lg:top-8"
           data-testid="cube-column"
         >
           <CubeView
@@ -1790,7 +1791,11 @@ export function CrossTrainer({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* 모바일에서는 버튼을 화면 아래에 붙여, 큐브를 보면서 바로 누를 수 있게 한다. */}
+      <div
+        data-testid="guide-controls"
+        className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t bg-background py-3 lg:static lg:border-t-0 lg:bg-transparent lg:py-0"
+      >
         <Button
           variant="outline"
           onClick={handlePrev}

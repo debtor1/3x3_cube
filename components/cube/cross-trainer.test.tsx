@@ -791,6 +791,9 @@ describe("데스크톱(PC) 가로 2열 분할 레이아웃 (desktop-horizontal-l
     const cubeCol = screen.getByTestId("cube-column");
     expect(cubeCol).toHaveClass("lg:col-span-5");
     expect(cubeCol).toHaveClass("lg:sticky");
+    // 키가 충분한 모바일 화면에서도 큐브가 화면 위에 붙는다.
+    expect(cubeCol).toHaveClass("tall-mobile:sticky");
+    expect(cubeCol).toHaveClass("tall-mobile:top-0");
 
     const guideCol = screen.getByTestId("guide-column");
     expect(guideCol).toHaveClass("lg:col-span-7");
@@ -798,6 +801,13 @@ describe("데스크톱(PC) 가로 2열 분할 레이아웃 (desktop-horizontal-l
     // 우측 열 내부에 조작 버튼이 포함되어 있음
     expect(guideCol).toContainElement(screen.getByRole("button", { name: "다음 동작" }));
     expect(guideCol).toContainElement(screen.getByRole("button", { name: "이전 동작" }));
+
+    // 모바일에서는 조작 버튼이 화면 아래에 붙고, 데스크톱에서는 제자리로 돌아간다.
+    const controls = screen.getByTestId("guide-controls");
+    expect(controls).toHaveClass("sticky");
+    expect(controls).toHaveClass("bottom-0");
+    expect(controls).toHaveClass("lg:static");
+    expect(controls).toContainElement(screen.getByRole("button", { name: "다음 동작" }));
   });
 
   it("수용 기준 4: 색상 입력 첫 화면에서는 중앙 집중형 max-w-xl 레이아웃을 유지한다", () => {

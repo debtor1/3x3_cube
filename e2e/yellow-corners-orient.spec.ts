@@ -20,7 +20,18 @@ test("7단계: 노란 꼭짓점 방향 맞추기 및 최종 6면 전체 완성�
   const isFinished = await page.getByText("🎉 축하합니다! 3x3 큐브를 모두 완성했어요!").isVisible();
   if (!isFinished) {
     await expect(page.getByText("7단계: 노란 꼭짓점 방향 (최종 완성)", { exact: true })).toBeVisible();
-    await expect(page.getByText(/7단계: 노란 꼭짓점 방향 맞추기 \(최종 완성!\)/)).toBeVisible();
+
+    // 7단계 첫 동작이 트위스트 공식이면 공식을 보여 주기 전에 맞혀 보기 퀴즈가 먼저 뜬다.
+    // 윗면 돌리기나 뒤집기로 시작하면 퀴즈 없이 바로 개념 카드가 뜨므로 두 경우를 모두 받는다.
+    const quiz = page.getByText("🤔 먼저 맞혀 볼까요?");
+    const concept = page.getByText(/7단계: 노란 꼭짓점 방향 맞추기 \(최종 완성!\)/);
+    await expect(quiz.or(concept).first()).toBeVisible();
+    if (await quiz.isVisible()) {
+      await page.getByRole("button", { name: "2단계 트위스트" }).click();
+      await expect(page.getByText("👏 맞았어요!")).toBeVisible();
+      await page.getByRole("button", { name: "공식 보러 가기" }).click();
+    }
+    await expect(concept).toBeVisible();
 
     // 공식 조건 / 지금 상황 확인
     await expect(page.getByText("지금 상황")).toBeVisible();

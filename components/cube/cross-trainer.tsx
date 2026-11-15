@@ -1146,8 +1146,13 @@ export function CrossTrainer({
         : describeFaceAction(activeAction)
     : null;
 
+  // 7단계 동작을 다 따라 했어도 큐브가 실제로 맞았는지는 따로 확인한다.
+  // 입력한 색이 실제 큐브와 다르면 수순을 다 마쳐도 맞지 않을 수 있다.
+  const isStage7Finished = stage === 7 && isStageDone;
+  const isCubeSolved = isYellowCornersOrientSolved(cube);
   const isAllSolved =
-    alreadySolved === "yellowCornersOrient" || (stage === 7 && isStageDone);
+    alreadySolved === "yellowCornersOrient" || (isStage7Finished && isCubeSolved);
+  const isStuckUnsolved = isStage7Finished && !isCubeSolved;
 
   return (
     <section
@@ -1217,7 +1222,9 @@ export function CrossTrainer({
                                   ? "노란 십자가 옆면 완성!"
                                   : stage6CompletedWaiting
                                     ? "노란 꼭짓점 자리 완성!"
-                                    : stage === 7 && isStageDone
+                                    : isStuckUnsolved
+                                      ? "큐브가 아직 다 맞지 않았어요"
+                                      : isStage7Finished
                                       ? "🎉 3x3 큐브가 모두 완성되었어요!"
                                       : stage === 6 && isStageDone
                                         ? "노란 꼭짓점 자리 완성!"
@@ -1259,7 +1266,9 @@ export function CrossTrainer({
                                   ? "노란 십자가 옆면 색이 모두 맞았어요. 준비되면 6단계로 넘어가요."
                                   : stage6CompletedWaiting
                                     ? "윗면 4개 꼭짓점이 모두 제자리에 놓였어요. 준비되면 마지막 7단계로 넘어가요."
-                                    : stage === 7 && isStageDone
+                                    : isStuckUnsolved
+                                      ? "지금 큐브 색을 다시 입력하면 이어서 안내해 줄게요."
+                                      : isStage7Finished
                                       ? "축하합니다! 여섯 면의 모든 색이 완벽하게 맞춰졌어요."
                                       : stage === 6 && isStageDone
                                         ? "윗면 4개 꼭짓점이 모두 각자의 제자리에 놓였어요."
@@ -1402,7 +1411,19 @@ export function CrossTrainer({
               7단계: 노란 꼭짓점 방향 맞추러 가기
             </Button>
           </div>
-        ) : isStageDone && stage === 7 ? (
+        ) : isStuckUnsolved ? (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-lg font-medium text-destructive">
+              안내한 동작을 모두 마쳤지만 큐브가 다 맞지 않았어요.
+            </p>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              지금 손에 든 큐브의 색을 다시 입력하면, 그 상태에서 이어서 안내해 줄게요.
+            </p>
+            <Button size="lg" onClick={restart}>
+              색 다시 입력하기
+            </Button>
+          </div>
+        ) : isStage7Finished ? (
           <div className="flex flex-col items-center gap-3">
             <p className="text-xl font-bold text-primary">🎉 축하합니다! 3x3 큐브를 모두 완성했어요!</p>
             <p className="text-sm text-muted-foreground max-w-sm">
@@ -1750,7 +1771,7 @@ export function CrossTrainer({
           </>
         ) : (
           <p className="text-lg font-medium">
-            {isYellowCornersOrientSolved(cube)
+            {isCubeSolved
               ? "축하합니다! 큐브 6면이 모두 완성되었어요."
               : isYellowCornersPosSolved(cube)
                 ? "윗면 4개 꼭짓점이 모두 제자리에 맞춰졌어요."
@@ -1791,7 +1812,7 @@ export function CrossTrainer({
           disabled={
             turn !== null ||
             alreadySolved !== null ||
-            (stage === 7 && isStageDone)
+            isStage7Finished
           }
         >
           다음 단계로 건너뛰기

@@ -3,6 +3,8 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* 큐브를 화면 위에 붙여도 설명을 읽을 틈이 남는, 키가 충분한 모바일 세로 화면. */
+@custom-variant tall-mobile (@media (width < 64rem) and (height >= 640px));
 
 @theme inline {
   --color-background: var(--background);

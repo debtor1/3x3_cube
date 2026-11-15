@@ -1146,8 +1146,13 @@ export function CrossTrainer({
         : describeFaceAction(activeAction)
     : null;
 
+  // 7단계 동작을 다 따라 했어도 큐브가 실제로 맞았는지는 따로 확인한다.
+  // 입력한 색이 실제 큐브와 다르면 수순을 다 마쳐도 맞지 않을 수 있다.
+  const isStage7Finished = stage === 7 && isStageDone;
+  const isCubeSolved = isYellowCornersOrientSolved(cube);
   const isAllSolved =
-    alreadySolved === "yellowCornersOrient" || (stage === 7 && isStageDone);
+    alreadySolved === "yellowCornersOrient" || (isStage7Finished && isCubeSolved);
+  const isStuckUnsolved = isStage7Finished && !isCubeSolved;
 
   return (
     <section
@@ -1217,7 +1222,9 @@ export function CrossTrainer({
                                   ? "노란 십자가 옆면 완성!"
                                   : stage6CompletedWaiting
                                     ? "노란 꼭짓점 자리 완성!"
-                                    : stage === 7 && isStageDone
+                                    : isStuckUnsolved
+                                      ? "큐브가 아직 다 맞지 않았어요"
+                                      : isStage7Finished
                                       ? "🎉 3x3 큐브가 모두 완성되었어요!"
                                       : stage === 6 && isStageDone
                                         ? "노란 꼭짓점 자리 완성!"
@@ -1259,7 +1266,9 @@ export function CrossTrainer({
                                   ? "노란 십자가 옆면 색이 모두 맞았어요. 준비되면 6단계로 넘어가요."
                                   : stage6CompletedWaiting
                                     ? "윗면 4개 꼭짓점이 모두 제자리에 놓였어요. 준비되면 마지막 7단계로 넘어가요."
-                                    : stage === 7 && isStageDone
+                                    : isStuckUnsolved
+                                      ? "지금 큐브 색을 다시 입력하면 이어서 안내해 줄게요."
+                                      : isStage7Finished
                                       ? "축하합니다! 여섯 면의 모든 색이 완벽하게 맞춰졌어요."
                                       : stage === 6 && isStageDone
                                         ? "윗면 4개 꼭짓점이 모두 각자의 제자리에 놓였어요."
@@ -1312,9 +1321,10 @@ export function CrossTrainer({
         className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start"
         data-testid="guide-layout-container"
       >
-        {/* 좌측 열: 3D 큐브 뷰 */}
+        {/* 좌측 열: 3D 큐브 뷰. 키가 충분한 모바일 화면에서는 설명이 길어져도 큐브가 보이도록 화면 위에 붙여 둔다.
+            가로로 눕힌 휴대폰처럼 키가 낮으면 큐브가 화면을 다 덮으므로 붙이지 않는다. */}
         <div
-          className="flex flex-col items-center justify-center lg:col-span-5 xl:col-span-5 lg:sticky lg:top-8"
+          className="flex flex-col items-center justify-center tall-mobile:sticky tall-mobile:top-0 tall-mobile:z-10 tall-mobile:bg-background lg:col-span-5 xl:col-span-5 lg:sticky lg:top-8"
           data-testid="cube-column"
         >
           <CubeView
@@ -1402,7 +1412,19 @@ export function CrossTrainer({
               7단계: 노란 꼭짓점 방향 맞추러 가기
             </Button>
           </div>
-        ) : isStageDone && stage === 7 ? (
+        ) : isStuckUnsolved ? (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-lg font-medium text-destructive">
+              안내한 동작을 모두 마쳤지만 큐브가 다 맞지 않았어요.
+            </p>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              지금 손에 든 큐브의 색을 다시 입력하면, 그 상태에서 이어서 안내해 줄게요.
+            </p>
+            <Button size="lg" onClick={restart}>
+              색 다시 입력하기
+            </Button>
+          </div>
+        ) : isStage7Finished ? (
           <div className="flex flex-col items-center gap-3">
             <p className="text-xl font-bold text-primary">🎉 축하합니다! 3x3 큐브를 모두 완성했어요!</p>
             <p className="text-sm text-muted-foreground max-w-sm">
@@ -1750,7 +1772,7 @@ export function CrossTrainer({
           </>
         ) : (
           <p className="text-lg font-medium">
-            {isYellowCornersOrientSolved(cube)
+            {isCubeSolved
               ? "축하합니다! 큐브 6면이 모두 완성되었어요."
               : isYellowCornersPosSolved(cube)
                 ? "윗면 4개 꼭짓점이 모두 제자리에 맞춰졌어요."
@@ -1769,7 +1791,11 @@ export function CrossTrainer({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* 모바일에서는 버튼을 화면 아래에 붙여, 큐브를 보면서 바로 누를 수 있게 한다. */}
+      <div
+        data-testid="guide-controls"
+        className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t bg-background py-3 lg:static lg:border-t-0 lg:bg-transparent lg:py-0"
+      >
         <Button
           variant="outline"
           onClick={handlePrev}
@@ -1791,7 +1817,7 @@ export function CrossTrainer({
           disabled={
             turn !== null ||
             alreadySolved !== null ||
-            (stage === 7 && isStageDone)
+            isStage7Finished
           }
         >
           다음 단계로 건너뛰기

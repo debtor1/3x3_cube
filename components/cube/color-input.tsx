@@ -1,7 +1,13 @@
 "use client";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { COLOR_NAMES, COLOR_VALUES, PAINT_ORDER } from "@/lib/cube/appearance";
+import {
+  COLOR_NAMES,
+  COLOR_VALUES,
+  FACE_LABELS,
+  PAINT_ORDER,
+  describeFacelet,
+} from "@/lib/cube/appearance";
 import { MAX_PER_COLOR, countPainted } from "@/lib/cube/paint";
 import { FACES, type Color, type Face, faceletIndex } from "@/lib/cube/state";
 
@@ -13,15 +19,6 @@ const LAYOUT: Record<Face, { readonly row: number; readonly col: number }> = {
   R: { row: 2, col: 3 },
   B: { row: 2, col: 4 },
   D: { row: 3, col: 2 },
-};
-
-const FACE_LABEL: Record<Face, string> = {
-  U: "윗면",
-  R: "오른쪽 면",
-  F: "앞면",
-  D: "아랫면",
-  L: "왼쪽 면",
-  B: "뒷면",
 };
 
 type Props = {
@@ -100,7 +97,7 @@ export function ColorInput({
             style={{ gridRow: LAYOUT[face].row, gridColumn: LAYOUT[face].col }}
           >
             <span className="text-[11px] text-muted-foreground">
-              {FACE_LABEL[face]}
+              {FACE_LABELS[face]}
             </span>
             <div className="grid grid-cols-3 gap-[3px]">
               {Array.from({ length: 9 }, (_, cell) => {
@@ -117,7 +114,7 @@ export function ColorInput({
                     type="button"
                     disabled={isCenter}
                     onClick={() => onPaint(index)}
-                    aria-label={`${FACE_LABEL[face]} ${row + 1}번째 줄 ${col + 1}번째 칸${
+                    aria-label={`${describeFacelet(face, cell)}${
                       color ? `, ${COLOR_NAMES[color]}` : ", 아직 안 칠함"
                     }`}
                     className={`aspect-square rounded-[4px] border transition-[outline-color,transform] ${

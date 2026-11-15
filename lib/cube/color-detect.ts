@@ -42,6 +42,20 @@ function labDistance(a: Lab, b: Lab): number {
 }
 
 /**
+ * 칸마다 여섯 색(각 면 중심 칸의 실제 색) 각각까지의 거리를 54칸 순서로 돌려줍니다.
+ * 입력이 실제 큐브와 맞지 않을 때, 사진에서 어느 칸이 헷갈렸을지 가늠하는 데 씁니다.
+ */
+export function colorDistancesOf(samples: FaceSamples): number[][] {
+  const references = FACES.map((face) => rgbToLab(samples[face][CENTER_INDEX]));
+  return FACES.flatMap((face) =>
+    samples[face].map((rgb) => {
+      const lab = rgbToLab(rgb);
+      return references.map((ref) => labDistance(lab, ref));
+    })
+  );
+}
+
+/**
  * 6개 면에서 뽑은 칸별 RGB 샘플을 큐브 색으로 분류합니다.
  *
  * 고정된 "표준 색" 대신 각 면 중심 칸의 실제 색을 기준으로 삼기 때문에

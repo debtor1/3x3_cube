@@ -1,4 +1,4 @@
-import type { Color } from "./state";
+import type { Color, Face } from "./state";
 
 /** 아이가 화면에서 읽는 색 이름. 면 이름이 아니라 실제 큐브의 색으로 부른다. */
 export const COLOR_NAMES: Record<Color, string> = {
@@ -19,6 +19,21 @@ export const COLOR_VALUES: Record<Color, string> = {
   L: "#f97316",
   B: "#2563eb",
 };
+
+/** 아이가 화면에서 읽는 면 이름. 큐브를 정면으로 들었을 때의 자리로 부른다. */
+export const FACE_LABELS: Record<Face, string> = {
+  U: "윗면",
+  R: "오른쪽 면",
+  F: "앞면",
+  D: "아랫면",
+  L: "왼쪽 면",
+  B: "뒷면",
+};
+
+/** 전개도에서 한 칸이 어디인지 읽어 주는 말. 예: "앞면 1번째 줄 2번째 칸". */
+export function describeFacelet(face: Face, cell: number): string {
+  return `${FACE_LABELS[face]} ${Math.floor(cell / 3) + 1}번째 줄 ${(cell % 3) + 1}번째 칸`;
+}
 
 export const PAINT_ORDER: readonly Color[] = ["U", "F", "R", "B", "L", "D"];
 

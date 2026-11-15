@@ -902,3 +902,43 @@ describe("원리와 공식을 익히는 학습 가이드 (learning-guide)", () =
     expect(within(notebook).getByText("노란 꼭짓점 공식")).toBeInTheDocument();
   });
 });
+
+describe("풀 수 없는 입력의 최단 수정 제안 (repair-suggestion)", () => {
+  function twistedCube() {
+    const facelets = [...applyMoves(solvedCube(), [
+      { face: "R", clockwise: true },
+      { face: "U", clockwise: false },
+      { face: "F", clockwise: true },
+    ])];
+    // 오른쪽 앞 위 꼭짓점의 세 칸(윗면 9번, 오른쪽 면 1번, 앞면 3번)을 한 칸씩 밀어 비튼다.
+    const [u, r, f] = [8, 9, 20];
+    [facelets[u], facelets[r], facelets[f]] = [facelets[f], facelets[u], facelets[r]];
+    return facelets;
+  }
+
+  it("꼭짓점이 비틀린 입력으로 시작하면 세 칸만 고치는 방법을 제안하고, 누르면 고쳐져 시작할 수 있다", () => {
+    render(<CrossTrainer initialPainted={twistedCube()} />);
+    fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
+
+    const suggestion = screen.getByTestId("repair-suggestion");
+    expect(suggestion).toHaveTextContent("3칸만 고치면 실제 큐브가 돼요");
+    expect(screen.getByRole("button", { name: "다른 제안 보기" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "제안대로 고치기" }));
+    expect(screen.queryByTestId("repair-suggestion")).not.toBeInTheDocument();
+    expect(screen.getByText(/제안대로 고쳤어요/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
+    expect(screen.queryByText("이 큐브는 실제로 만들 수 없어요")).not.toBeInTheDocument();
+    expect(screen.getByTestId("guide-layout-container")).toBeInTheDocument();
+  });
+
+  it("다른 제안 보기를 누르면 다음 후보로 넘어간다", () => {
+    render(<CrossTrainer initialPainted={twistedCube()} />);
+    fireEvent.click(screen.getByRole("button", { name: "큐브 맞추기 시작" }));
+
+    expect(screen.getByTestId("repair-suggestion")).toHaveTextContent("제안 1/");
+    fireEvent.click(screen.getByRole("button", { name: "다른 제안 보기" }));
+    expect(screen.getByTestId("repair-suggestion")).toHaveTextContent("제안 2/");
+  });
+});

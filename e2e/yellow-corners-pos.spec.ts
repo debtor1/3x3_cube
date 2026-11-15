@@ -18,6 +18,14 @@ test("6단계: 노란 꼭짓점 자리 맞추기 안내와 8동작 대칭 공식
   // 6단계 헤더 확인
   await expect(page.getByText("6단계: 노란 꼭짓점 자리", { exact: true })).toBeVisible();
 
+  // 공식을 보여 주기 전에 맞혀 보기 퀴즈가 먼저 뜰 수 있다. 정답은 상황마다 달라서
+  // 아무 보기나 고르고 넘어간다. 오답이어도 정답을 알려 준 뒤 공식으로 넘어갈 수 있다.
+  const quiz = page.getByText("🤔 먼저 맞혀 볼까요?");
+  if (await quiz.isVisible()) {
+    await page.getByTestId("case-quiz").getByRole("button").first().click();
+    await page.getByRole("button", { name: "공식 보러 가기" }).click();
+  }
+
   const hasGuide = await page.getByText(/6단계: 노란 꼭짓점 자리 맞추기란\?/).isVisible();
   if (hasGuide) {
     // 공식 조건 / 지금 상황 확인
